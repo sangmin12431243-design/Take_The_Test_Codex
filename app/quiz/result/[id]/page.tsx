@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -19,7 +18,7 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
   );
 
   if (!session) {
-    return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">로딩 중...</main>;
+    return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">불러오는 중...</main>;
   }
 
   const correctCount = items.filter((item) => item.is_correct).length;
@@ -31,7 +30,7 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
       <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-        ← 첫 페이지로
+        홈으로
       </Link>
 
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -43,9 +42,9 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
           <div className="rounded-lg bg-slate-50 p-3">점수: {score}</div>
         </div>
 
-        <h2 className="mt-6 text-lg font-semibold">틀린 문제 목록</h2>
+        <h2 className="mt-6 text-lg font-semibold">오답 문제 목록</h2>
         <div className="mt-2 space-y-2">
-          {wrongItems.length === 0 && <p className="text-sm text-slate-500">틀린 문제가 없습니다.</p>}
+          {wrongItems.length === 0 && <p className="text-sm text-slate-500">오답 문제가 없습니다.</p>}
           {wrongItems.map((item, index) => (
             <article key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm">
               <p className="font-medium">
@@ -60,5 +59,4 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
       </section>
     </main>
   );
-
 }

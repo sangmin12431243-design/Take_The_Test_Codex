@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent } from "react";
-import { parseProblemsCsv, triggerCsvTemplateDownload, validateCsvRows } from "@/lib/csv/problem-csv";
+import { parseProblemsWorkbook, triggerCsvTemplateDownload, validateCsvRows } from "@/lib/csv/problem-csv";
 import { createProblemsFromCsv } from "@/lib/queries/problems";
 import type { CategoryRow } from "@/types/problem-management";
 import type { CsvValidationError, ParsedCsvProblemRow } from "@/types/problem-csv";
@@ -38,24 +38,24 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
     }
 
     try {
-      const text = await file.text();
-      const rows = parseProblemsCsv(text);
+      const buffer = await file.arrayBuffer();
+      const rows = parseProblemsWorkbook(buffer);
       const validation = validateCsvRows(rows);
       setParsedRows(rows);
       setErrors(validation.errors);
       if (rows.length === 0) {
-        setMessage("CSV에 데이터 행이 없습니다.");
+        setMessage("XLSX 데이터가 비어 있습니다.");
       }
     } catch (error) {
       setParsedRows([]);
       setErrors([]);
-      setMessage(error instanceof Error ? error.message : "CSV 파싱 중 오류가 발생했습니다.");
+      setMessage(error instanceof Error ? error.message : "XLSX 파싱 중 오류가 발생했습니다.");
     }
   };
 
   const handleUpload = async () => {
     if (parsedRows.length === 0) {
-      setMessage("업로드할 CSV 데이터를 먼저 선택하세요.");
+      setMessage("업로드할 XLSX 파일을 먼저 선택하세요.");
       return;
     }
 
@@ -72,10 +72,10 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
     try {
       const result = await createProblemsFromCsv(userId, validation.validRows, categories);
       setSummary(result);
-      setMessage("CSV 업로드가 완료되었습니다.");
+      setMessage("XLSX 업로드가 완료되었습니다.");
       await onUploaded();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "CSV 업로드 중 오류가 발생했습니다.");
+      setMessage(error instanceof Error ? error.message : "XLSX 업로드 중 오류가 발생했습니다.");
     } finally {
       setBusy(false);
     }
@@ -84,24 +84,25 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">CSV 업로드</h2>
+        <h2 className="text-lg font-semibold">XLSX 업로드</h2>
         <button
           type="button"
           onClick={triggerCsvTemplateDownload}
           className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
         >
-          CSV 템플릿 다운로드
+          한글 템플릿 다운로드
         </button>
       </div>
 
       <p className="mt-2 text-sm text-slate-600">
-        category, order_index, question_text, choice_1~4, correct_answer(1~4), explanation, difficulty, is_active 컬럼을 사용하세요.
+        한글 헤더 `카테고리`, `문제순서`, `문제`, `선지1~4`, `정답번호`, `해설`, `난이도`, `활성여부`를 사용하세요.
+        기존 영문 헤더 파일도 같이 지원합니다.
       </p>
 
       <div className="mt-4">
         <input
           type="file"
-          accept=".csv,text/csv"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           onChange={onFileChange}
           className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-medium"
         />
@@ -132,11 +133,11 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
             <thead className="bg-slate-50 text-left">
               <tr>
                 <th className="px-3 py-2">행</th>
-                <th className="px-3 py-2">category</th>
-                <th className="px-3 py-2">order_index</th>
-                <th className="px-3 py-2">question_text</th>
-                <th className="px-3 py-2">difficulty</th>
-                <th className="px-3 py-2">is_active</th>
+                <th className="px-3 py-2">카테고리</th>
+                <th className="px-3 py-2">문제순서</th>
+                <th className="px-3 py-2">문제</th>
+                <th className="px-3 py-2">난이도</th>
+                <th className="px-3 py-2">활성여부</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -162,7 +163,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
           onClick={handleUpload}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {busy ? "업로드 중..." : "CSV 업로드"}
+          {busy ? "업로드 중..." : "XLSX 업로드"}
         </button>
       </div>
     </section>

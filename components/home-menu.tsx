@@ -11,11 +11,11 @@ interface MenuAction {
 }
 
 const menuActions: MenuAction[] = [
-  { label: "문제 추가", href: "/problems", requiresAuth: true },
+  { label: "문제 관리", href: "/problems", requiresAuth: true },
   { label: "문제 풀기", href: "/quiz/setup", requiresAuth: true },
   { label: "오답 노트", href: "/wrong-notes", requiresAuth: true },
   { label: "별표 문제", href: "/starred", requiresAuth: true },
-  { label: "이어서 풀기", href: "/resume", requiresAuth: true },
+  { label: "이어 풀기", href: "/resume", requiresAuth: true },
 ];
 
 function classNames(...classes: string[]) {
@@ -32,13 +32,13 @@ export function HomeMenu() {
         <header className="mb-6 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">Take The Test</p>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">개인용 객관식 문제집</h1>
-          <p className="text-sm text-slate-600">문제를 추가하고 퀴즈를 풀면서 오답 노트와 별표 문제를 관리합니다.</p>
+          <p className="text-sm text-slate-600">문제를 직접 등록하고, 퀴즈를 풀고, 오답 노트와 별표 문제를 관리할 수 있습니다.</p>
           <p className="text-xs text-slate-500">
             {loading
               ? "로그인 상태를 확인 중입니다."
               : isLoggedIn
-                ? `${user?.email ?? "사용자"}로 로그인됨`
-                : "로그인하면 개인 문제 데이터를 저장할 수 있습니다."}
+                ? `${user?.email ?? "사용자"}로 로그인되었습니다.`
+                : "로그인하면 개인 문제 데이터를 저장하고 이어서 풀 수 있습니다."}
           </p>
         </header>
 
@@ -57,7 +57,7 @@ export function HomeMenu() {
                 onClick={() => signInWithGoogle()}
                 className="rounded-xl border border-brand-500 px-4 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
               >
-                Google로 회원가입
+                Google 계정으로 시작하기
               </button>
             </>
           ) : (
@@ -73,9 +73,7 @@ export function HomeMenu() {
           {menuActions.map((action) => {
             const disabled = Boolean(action.requiresAuth && !isLoggedIn);
 
-            if (!action.href) {
-              return null;
-            }
+            if (!action.href) return null;
 
             return (
               <Link

@@ -17,6 +17,12 @@ const defaultValues: ProblemFormValues = {
   is_active: true,
 };
 
+const difficultyLabels: Record<ProblemFormValues["difficulty"], string> = {
+  easy: "쉬움",
+  medium: "보통",
+  hard: "어려움",
+};
+
 interface Props {
   categories: CategoryRow[];
   initialValues?: ProblemFormValues | null;
@@ -68,7 +74,7 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
           required
           value={values.question_text}
           onChange={(e) => setField("question_text", e.target.value)}
-          placeholder="문제 내용"
+          placeholder="문제를 입력하세요"
           className="min-h-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
 
@@ -78,7 +84,7 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
             required
             value={values[key]}
             onChange={(e) => setField(key, e.target.value)}
-            placeholder={`선택지 ${index + 1}`}
+            placeholder={`선지 ${index + 1}`}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         ))}
@@ -89,10 +95,10 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
             onChange={(e) => setField("correct_answer", Number(e.target.value))}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value={1}>정답 1</option>
-            <option value={2}>정답 2</option>
-            <option value={3}>정답 3</option>
-            <option value={4}>정답 4</option>
+            <option value={1}>정답 1번</option>
+            <option value={2}>정답 2번</option>
+            <option value={3}>정답 3번</option>
+            <option value={4}>정답 4번</option>
           </select>
 
           <select
@@ -100,9 +106,11 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
             onChange={(e) => setField("difficulty", e.target.value as ProblemFormValues["difficulty"])}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="easy">easy</option>
-            <option value="medium">medium</option>
-            <option value="hard">hard</option>
+            {Object.entries(difficultyLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
 
           <input
@@ -127,7 +135,7 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
             checked={values.is_active}
             onChange={(e) => setField("is_active", e.target.checked)}
           />
-          활성 문제로 저장
+          활성 문제로 등록
         </label>
 
         <div className="flex gap-2">

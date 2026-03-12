@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -37,22 +36,22 @@ export default function WrongNotesPage() {
   }, [items, masteredBottom, showMastered, sort]);
 
   if (loading || !user) {
-    return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 이용 가능합니다.</main>;
+    return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
   }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">
       <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-        ← 첫 페이지로
+        홈으로
       </Link>
 
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">오답노트</h1>
+        <h1 className="text-2xl font-bold">오답 노트</h1>
 
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-          <select value={sort} onChange={(e) => setSort(e.target.value as any)} className="rounded-lg border border-slate-300 px-3 py-2">
-            <option value="wrong_desc">많이 틀린 순</option>
-            <option value="wrong_asc">적게 틀린 순</option>
+          <select value={sort} onChange={(e) => setSort(e.target.value as "wrong_desc" | "wrong_asc")} className="rounded-lg border border-slate-300 px-3 py-2">
+            <option value="wrong_desc">오답 많은 순</option>
+            <option value="wrong_asc">오답 적은 순</option>
           </select>
 
           <select
@@ -60,8 +59,8 @@ export default function WrongNotesPage() {
             onChange={(e) => setShowMastered(e.target.value === "show")}
             className="rounded-lg border border-slate-300 px-3 py-2"
           >
-            <option value="show">숙지 문제 보기</option>
-            <option value="hide">숙지 문제 숨기기</option>
+            <option value="show">숙달 문제 보기</option>
+            <option value="hide">숙달 문제 숨기기</option>
           </select>
 
           <select
@@ -69,8 +68,8 @@ export default function WrongNotesPage() {
             onChange={(e) => setMasteredBottom(e.target.value === "bottom")}
             className="rounded-lg border border-slate-300 px-3 py-2"
           >
-            <option value="bottom">숙지 문제 맨 밑으로</option>
-            <option value="mixed">숙지 문제 섞어서 보기</option>
+            <option value="bottom">숙달 문제 아래로 보내기</option>
+            <option value="mixed">숙달 문제 함께 보기</option>
           </select>
         </div>
 
@@ -81,7 +80,7 @@ export default function WrongNotesPage() {
               <article key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm">
                 <p className="font-medium">{item.problems?.question_text}</p>
                 <p className="mt-1 text-slate-600">
-                  틀린 횟수: {item.wrong_count} · 정답률: {accuracy}%
+                  오답 횟수: {item.wrong_count} · 정답률: {accuracy}%
                 </p>
                 <label className="mt-2 flex items-center gap-2 text-xs">
                   <input
@@ -92,7 +91,7 @@ export default function WrongNotesPage() {
                       await load();
                     }}
                   />
-                  숙지 체크
+                  숙달 체크
                 </label>
               </article>
             );

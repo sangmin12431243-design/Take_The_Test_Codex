@@ -5,7 +5,7 @@ export function PageShell({ title, description }: { title: string; description: 
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
       <div className="mb-6">
         <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-          ← 첫 페이지로
+          홈으로
         </Link>
       </div>
 

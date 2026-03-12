@@ -8,6 +8,12 @@ interface Props {
   onDeactivate: (problemId: string) => Promise<void>;
 }
 
+function difficultyLabel(value: ProblemWithCategory["difficulty"]) {
+  if (value === "easy") return "쉬움";
+  if (value === "medium") return "보통";
+  return "어려움";
+}
+
 export function ProblemList({ problems, onEdit, onDeactivate }: Props) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -21,7 +27,8 @@ export function ProblemList({ problems, onEdit, onDeactivate }: Props) {
           <article key={problem.id} className="rounded-xl border border-slate-200 p-3">
             <p className="text-sm font-medium">{problem.question_text}</p>
             <p className="mt-1 text-xs text-slate-500">
-              카테고리: {problem.categories?.name ?? "미지정"} · 난이도: {problem.difficulty} · 상태: {problem.is_active ? "활성" : "비활성"}
+              카테고리: {problem.categories?.name ?? "미지정"} · 난이도: {difficultyLabel(problem.difficulty)} · 상태:{" "}
+              {problem.is_active ? "활성" : "비활성"}
             </p>
             <div className="mt-3 flex gap-2">
               <button onClick={() => onEdit(problem)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white">
@@ -58,7 +65,7 @@ export function ProblemList({ problems, onEdit, onDeactivate }: Props) {
                 <td className="py-3">{problem.order_index}</td>
                 <td className="py-3">{problem.question_text}</td>
                 <td className="py-3">{problem.categories?.name ?? "미지정"}</td>
-                <td className="py-3">{problem.difficulty}</td>
+                <td className="py-3">{difficultyLabel(problem.difficulty)}</td>
                 <td className="py-3">{problem.is_active ? "활성" : "비활성"}</td>
                 <td className="py-3">
                   <div className="flex gap-2">

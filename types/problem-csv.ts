@@ -1,6 +1,6 @@
 import type { Difficulty } from "@/types/database";
 
-export type ProblemsTab = "single" | "csv";
+export type ProblemsTab = "single" | "xlsx";
 
 export interface CsvProblemRow {
   category: string;

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -48,9 +47,9 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
         <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-          ← 첫 페이지로
+          홈으로
         </Link>
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6">로딩 중...</div>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6">불러오는 중...</div>
       </main>
     );
   }
@@ -124,7 +123,9 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
       <header className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span>진행률 {currentIndex + 1}/{items.length}</span>
+          <span>
+            진행률 {currentIndex + 1}/{items.length}
+          </span>
           <span>{progress}%</span>
         </div>
         <div className="h-2 rounded-full bg-slate-100">
@@ -145,7 +146,7 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
             }}
             className="rounded-lg border border-amber-300 px-3 py-1 text-sm text-amber-700"
           >
-            {current.starred_at_exam_time ? "★ 별표됨" : "☆ 별표"}
+            {current.starred_at_exam_time ? "별표 해제" : "별표"}
           </button>
         </div>
 
@@ -174,7 +175,7 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
 
         {session.answer_mode === "instant" && checked && (
           <p className={`mt-3 text-sm ${selectedAnswer === question.correct_answer ? "text-emerald-600" : "text-rose-600"}`}>
-            {selectedAnswer === question.correct_answer ? "정답입니다." : `오답입니다. 정답은 ${question.correct_answer}번`}
+            {selectedAnswer === question.correct_answer ? "정답입니다." : `오답입니다. 정답은 ${question.correct_answer}번입니다.`}
           </p>
         )}
 
@@ -182,10 +183,10 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
           <div className="mt-4">
             <button
               type="button"
-              onClick={() => setExplanationState((prev) => (prev === "idle" ? "armed" : prev === "armed" ? "visible" : "visible"))}
+              onClick={() => setExplanationState((prev) => (prev === "idle" ? "armed" : "visible"))}
               className="rounded-lg border border-slate-300 px-3 py-1 text-xs"
             >
-              해설 {explanationState === "idle" ? "(1회: 준비, 2회: 표시)" : explanationState === "armed" ? "준비됨" : "표시중"}
+              해설 {explanationState === "idle" ? "(1회 준비, 2회 표시)" : explanationState === "armed" ? "준비됨" : "표시 중"}
             </button>
             {explanationState === "visible" && (
               <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{question.explanation ?? "해설이 없습니다."}</p>

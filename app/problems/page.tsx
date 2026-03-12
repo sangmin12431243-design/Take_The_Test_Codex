@@ -93,12 +93,12 @@ export default function ProblemsPage() {
       <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
         <div className="mb-6">
           <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-            ← 첫 페이지로
+            홈으로
           </Link>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold">문제 관리</h1>
-          <p className="mt-2 text-sm text-slate-600">로그인 후 본인 문제를 관리할 수 있습니다.</p>
+          <p className="mt-2 text-sm text-slate-600">로그인 후 카테고리와 문제를 관리할 수 있습니다.</p>
         </section>
       </main>
     );
@@ -110,13 +110,13 @@ export default function ProblemsPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6">
       <div>
         <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-          ← 첫 페이지로
+          홈으로
         </Link>
       </div>
 
       <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">문제 관리</h1>
-        <p className="mt-2 text-sm text-slate-600">로그인 사용자 본인의 문제만 조회/추가/수정/비활성화할 수 있습니다.</p>
+        <p className="mt-2 text-sm text-slate-600">카테고리 생성, 단일 문제 추가, XLSX 일괄 업로드를 할 수 있습니다.</p>
       </header>
 
       <CategoryManager
@@ -138,16 +138,16 @@ export default function ProblemsPage() {
               activeTab === "single" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            단일 추가
+            문제 추가
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("csv")}
+            onClick={() => setActiveTab("xlsx")}
             className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              activeTab === "csv" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              activeTab === "xlsx" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            CSV 업로드
+            XLSX 업로드
           </button>
         </div>
       </section>
@@ -184,7 +184,6 @@ export default function ProblemsPage() {
       ) : (
         <ProblemList
           problems={problems}
-
           onEdit={(problem) => {
             setEditing(problem);
             setActiveTab("single");

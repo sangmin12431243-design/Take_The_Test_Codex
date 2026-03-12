@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { CategoryRow, ProblemFilters } from '@/types/problem-management';
+import type { CategoryRow, ProblemFilters } from "@/types/problem-management";
 
 interface Props {
   categories: CategoryRow[];
@@ -18,6 +18,7 @@ export function ProblemFiltersBar({ categories, filters, onChange }: Props) {
           placeholder="문제 내용 검색"
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
+
         <select
           value={filters.categoryId}
           onChange={(e) => onChange({ ...filters, categoryId: e.target.value })}
@@ -36,15 +37,15 @@ export function ProblemFiltersBar({ categories, filters, onChange }: Props) {
           onChange={(e) =>
             onChange({
               ...filters,
-              difficulty: e.target.value as ProblemFilters['difficulty'],
+              difficulty: e.target.value as ProblemFilters["difficulty"],
             })
           }
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         >
           <option value="all">전체 난이도</option>
-          <option value="easy">easy</option>
-          <option value="medium">medium</option>
-          <option value="hard">hard</option>
+          <option value="easy">쉬움</option>
+          <option value="medium">보통</option>
+          <option value="hard">어려움</option>
         </select>
 
         <select
@@ -52,12 +53,12 @@ export function ProblemFiltersBar({ categories, filters, onChange }: Props) {
           onChange={(e) =>
             onChange({
               ...filters,
-              active: e.target.value as ProblemFilters['active'],
+              active: e.target.value as ProblemFilters["active"],
             })
           }
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         >
-          <option value="all">활성/비활성 전체</option>
+          <option value="all">전체 상태</option>
           <option value="active">활성</option>
           <option value="inactive">비활성</option>
         </select>

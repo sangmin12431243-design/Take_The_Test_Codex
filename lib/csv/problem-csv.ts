@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import type {
   CsvProblemRow,
   CsvValidationError,
@@ -5,7 +6,7 @@ import type {
   ValidatedCsvProblemRow,
 } from "@/types/problem-csv";
 
-const requiredHeaders: (keyof CsvProblemRow)[] = [
+const fieldOrder: (keyof CsvProblemRow)[] = [
   "category",
   "order_index",
   "question_text",
@@ -19,77 +20,142 @@ const requiredHeaders: (keyof CsvProblemRow)[] = [
   "is_active",
 ];
 
-export const csvTemplateText = `category,order_index,question_text,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty,is_active\nsample,1,대한민국의 수도는?,서울,부산,대구,인천,1,서울은 대한민국의 수도이다,easy,true\nsample,2,2+2는?,1,2,3,4,4,2+2는 4이다,easy,true`;
+const headerAliases: Record<keyof CsvProblemRow, string[]> = {
+  category: ["카테고리", "category"],
+  order_index: ["문제순서", "order_index"],
+  question_text: ["문제", "question_text"],
+  choice_1: ["선지1", "choice_1"],
+  choice_2: ["선지2", "choice_2"],
+  choice_3: ["선지3", "choice_3"],
+  choice_4: ["선지4", "choice_4"],
+  correct_answer: ["정답번호", "correct_answer"],
+  explanation: ["해설", "explanation"],
+  difficulty: ["난이도", "difficulty"],
+  is_active: ["활성여부", "is_active"],
+};
 
-function parseCsvLine(line: string): string[] {
-  const cells: string[] = [];
-  let current = "";
-  let inQuotes = false;
+const difficultyMap: Record<string, "easy" | "medium" | "hard"> = {
+  easy: "easy",
+  medium: "medium",
+  hard: "hard",
+  쉬움: "easy",
+  보통: "medium",
+  어려움: "hard",
+};
 
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
+const activeMap: Record<string, boolean> = {
+  true: true,
+  false: false,
+  활성: true,
+  비활성: false,
+  예: true,
+  아니오: false,
+  yes: true,
+  no: false,
+  y: true,
+  n: false,
+};
 
-    if (char === '"') {
-      const isEscapedQuote = inQuotes && line[i + 1] === '"';
-      if (isEscapedQuote) {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
+const templateRows = [
+  {
+    카테고리: "sample",
+    문제순서: "1",
+    문제: "대한민국의 수도는?",
+    선지1: "서울",
+    선지2: "부산",
+    선지3: "대구",
+    선지4: "인천",
+    정답번호: "1",
+    해설: "서울은 대한민국의 수도이다",
+    난이도: "쉬움",
+    활성여부: "활성",
+  },
+  {
+    카테고리: "sample",
+    문제순서: "2",
+    문제: "2+2는?",
+    선지1: "1",
+    선지2: "2",
+    선지3: "3",
+    선지4: "4",
+    정답번호: "4",
+    해설: "2+2는 4이다",
+    난이도: "쉬움",
+    활성여부: "활성",
+  },
+];
 
-    if (char === "," && !inQuotes) {
-      cells.push(current.trim());
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  cells.push(current.trim());
-  return cells;
+function normalizeCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
 }
 
-export function parseProblemsCsv(csvText: string): ParsedCsvProblemRow[] {
-  const normalized = csvText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-  if (!normalized) {
+function getCanonicalKey(header: string): keyof CsvProblemRow | null {
+  const normalized = header.trim();
+
+  for (const field of fieldOrder) {
+    if (headerAliases[field].includes(normalized)) {
+      return field;
+    }
+  }
+
+  return null;
+}
+
+function normalizeDifficulty(value: string) {
+  return difficultyMap[value.trim()] ?? difficultyMap[value.trim().toLowerCase()];
+}
+
+function normalizeActive(value: string) {
+  return activeMap[value.trim()] ?? activeMap[value.trim().toLowerCase()];
+}
+
+export function parseProblemsWorkbook(buffer: ArrayBuffer): ParsedCsvProblemRow[] {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+
+  if (!firstSheetName) {
     return [];
   }
 
-  const lines = normalized.split("\n").filter((line) => line.trim().length > 0);
-  if (lines.length === 0) {
+  const worksheet = workbook.Sheets[firstSheetName];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: "",
+    raw: false,
+  });
+
+  if (rows.length === 0) {
     return [];
   }
 
-  const headers = parseCsvLine(lines[0]);
-  const headerMap = new Map(headers.map((header, index) => [header, index]));
+  const sourceHeaders = Object.keys(rows[0] ?? {});
+  const keyMap = new Map<keyof CsvProblemRow, string>();
 
-  const missingHeaders = requiredHeaders.filter((key) => !headerMap.has(key));
+  sourceHeaders.forEach((header) => {
+    const canonicalKey = getCanonicalKey(header);
+    if (canonicalKey && !keyMap.has(canonicalKey)) {
+      keyMap.set(canonicalKey, header);
+    }
+  });
+
+  const missingHeaders = fieldOrder.filter((key) => !keyMap.has(key));
   if (missingHeaders.length > 0) {
-    throw new Error(`CSV 헤더가 올바르지 않습니다. 누락 컬럼: ${missingHeaders.join(", ")}`);
+    const missingLabels = missingHeaders.map((key) => headerAliases[key][0]);
+    throw new Error(`XLSX 헤더가 올바르지 않습니다. 누락 컬럼: ${missingLabels.join(", ")}`);
   }
 
-  const rows: ParsedCsvProblemRow[] = [];
-
-  for (let i = 1; i < lines.length; i += 1) {
-    const values = parseCsvLine(lines[i]);
-
-    const row = requiredHeaders.reduce((acc, key) => {
-      const index = headerMap.get(key);
-      acc[key] = typeof index === "number" ? (values[index] ?? "").trim() : "";
+  return rows.map((rawRow, index) => {
+    const raw = fieldOrder.reduce((acc, key) => {
+      const sourceHeader = keyMap.get(key) ?? key;
+      acc[key] = normalizeCell(rawRow[sourceHeader]);
       return acc;
     }, {} as CsvProblemRow);
 
-    rows.push({
-      rowNumber: i + 1,
-      raw: row,
-    });
-  }
-
-  return rows;
+    return {
+      rowNumber: index + 2,
+      raw,
+    };
+  });
 }
 
 export function validateCsvRows(rows: ParsedCsvProblemRow[]): {
@@ -103,33 +169,35 @@ export function validateCsvRows(rows: ParsedCsvProblemRow[]): {
     const { raw, rowNumber } = row;
 
     if (!raw.category) {
-      errors.push({ rowNumber, message: "category는 필수입니다." });
+      errors.push({ rowNumber, message: "카테고리는 필수입니다." });
     }
 
     if (!raw.question_text) {
-      errors.push({ rowNumber, message: "question_text는 필수입니다." });
+      errors.push({ rowNumber, message: "문제는 필수입니다." });
     }
 
     if (!raw.choice_1 || !raw.choice_2 || !raw.choice_3 || !raw.choice_4) {
-      errors.push({ rowNumber, message: "choice_1~choice_4는 모두 필수입니다." });
+      errors.push({ rowNumber, message: "선지 1~4는 모두 필수입니다." });
     }
 
     const orderIndex = Number(raw.order_index);
     if (!Number.isFinite(orderIndex)) {
-      errors.push({ rowNumber, message: "order_index는 숫자여야 합니다." });
+      errors.push({ rowNumber, message: "문제순서는 숫자여야 합니다." });
     }
 
     const correctAnswer = Number(raw.correct_answer);
     if (![1, 2, 3, 4].includes(correctAnswer)) {
-      errors.push({ rowNumber, message: "correct_answer는 1~4만 허용됩니다." });
+      errors.push({ rowNumber, message: "정답번호는 1~4만 허용됩니다." });
     }
 
-    if (!["easy", "medium", "hard"].includes(raw.difficulty)) {
-      errors.push({ rowNumber, message: "difficulty는 easy|medium|hard만 허용됩니다." });
+    const normalizedDifficulty = normalizeDifficulty(raw.difficulty);
+    if (!normalizedDifficulty) {
+      errors.push({ rowNumber, message: "난이도는 쉬움, 보통, 어려움 또는 easy, medium, hard만 허용됩니다." });
     }
 
-    if (!["true", "false"].includes(raw.is_active.toLowerCase())) {
-      errors.push({ rowNumber, message: "is_active는 true|false만 허용됩니다." });
+    const normalizedActive = normalizeActive(raw.is_active);
+    if (typeof normalizedActive !== "boolean") {
+      errors.push({ rowNumber, message: "활성여부는 활성, 비활성, 예, 아니오 또는 true, false만 허용됩니다." });
     }
 
     const hasCurrentRowError = errors.some((error) => error.rowNumber === rowNumber);
@@ -148,8 +216,8 @@ export function validateCsvRows(rows: ParsedCsvProblemRow[]): {
       choice_4: raw.choice_4,
       correct_answer: correctAnswer,
       explanation: raw.explanation ?? "",
-      difficulty: raw.difficulty as "easy" | "medium" | "hard",
-      is_active: raw.is_active.toLowerCase() === "true",
+      difficulty: normalizedDifficulty!,
+      is_active: normalizedActive!,
     });
   });
 
@@ -157,13 +225,10 @@ export function validateCsvRows(rows: ParsedCsvProblemRow[]): {
 }
 
 export function triggerCsvTemplateDownload(): void {
-  const blob = new Blob([csvTemplateText], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", "problem_template.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const worksheet = XLSX.utils.json_to_sheet(templateRows, {
+    header: ["카테고리", "문제순서", "문제", "선지1", "선지2", "선지3", "선지4", "정답번호", "해설", "난이도", "활성여부"],
+  });
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "problems");
+  XLSX.writeFile(workbook, "problem_template.xlsx");
 }
