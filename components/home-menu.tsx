@@ -8,7 +8,6 @@ interface MenuAction {
   label: string;
   href?: string;
   requiresAuth?: boolean;
-  variant?: "default" | "outline";
 }
 
 const menuActions: MenuAction[] = [
@@ -16,7 +15,7 @@ const menuActions: MenuAction[] = [
   { label: "문제 풀기", href: "/quiz/setup", requiresAuth: true },
   { label: "오답 노트", href: "/wrong-notes", requiresAuth: true },
   { label: "별표 문제", href: "/starred", requiresAuth: true },
-  { label: "진행 중 시험 이어하기", href: "/resume" },
+  { label: "이어서 풀기", href: "/resume", requiresAuth: true },
 ];
 
 function classNames(...classes: string[]) {
@@ -32,14 +31,14 @@ export function HomeMenu() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <header className="mb-6 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">Take The Test</p>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">개인용 4지선다 문제은행</h1>
-          <p className="text-sm text-slate-600">문제를 추가하고, 퀴즈를 풀며, 오답노트와 별표 문제를 관리하세요.</p>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">개인용 객관식 문제집</h1>
+          <p className="text-sm text-slate-600">문제를 추가하고 퀴즈를 풀면서 오답 노트와 별표 문제를 관리합니다.</p>
           <p className="text-xs text-slate-500">
             {loading
-              ? "로그인 상태를 확인 중입니다..."
+              ? "로그인 상태를 확인 중입니다."
               : isLoggedIn
-                ? `${user?.email ?? "사용자"} 님 로그인됨`
-                : "로그인하면 개인 문제 데이터가 활성화됩니다."}
+                ? `${user?.email ?? "사용자"}로 로그인됨`
+                : "로그인하면 개인 문제 데이터를 저장할 수 있습니다."}
           </p>
         </header>
 
@@ -51,14 +50,14 @@ export function HomeMenu() {
                 onClick={() => signInWithGoogle()}
                 className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
               >
-                로그인
+                Google로 로그인
               </button>
               <button
                 type="button"
                 onClick={() => signInWithGoogle()}
                 className="rounded-xl border border-brand-500 px-4 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
               >
-                회원가입 (구글 로그인)
+                Google로 회원가입
               </button>
             </>
           ) : (

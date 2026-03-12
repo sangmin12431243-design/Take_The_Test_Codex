@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
+import { ensureUserProfile } from "@/lib/queries/users";
 
 interface AuthContextValue {
   user: User | null;
@@ -23,15 +24,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
+      if (data.session?.user) {
+        try {
+          await ensureUserProfile(data.session.user);
+        } catch (error) {
+          console.error("Failed to sync user profile", error);
+        }
+      }
       setSession(data.session);
       setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      if (nextSession?.user) {
+        try {
+          await ensureUserProfile(nextSession.user);
+        } catch (error) {
+          console.error("Failed to sync user profile", error);
+        }
+      }
       setSession(nextSession);
       setLoading(false);
     });

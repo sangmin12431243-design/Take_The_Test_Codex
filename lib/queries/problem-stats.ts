@@ -64,7 +64,7 @@ export async function fetchWrongNotes(userId: string) {
     .gt("wrong_count", 0);
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown[];
 }
 
 export async function updateMastered(problemStatId: string, mastered: boolean) {
@@ -85,5 +85,5 @@ export async function fetchStarredProblems(userId: string) {
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown[];
 }

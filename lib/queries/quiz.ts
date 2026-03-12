@@ -46,7 +46,7 @@ export async function fetchActiveProblemsByCategories(userId: string, categoryId
 
   const { data, error } = await query.order("order_index", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as QuizProblem[];
+  return (data ?? []) as unknown as QuizProblem[];
 }
 
 function buildBalancedSelection(problems: QuizProblem[], categoryIds: string[], requestedCount: number) {
@@ -131,7 +131,7 @@ export async function fetchSession(sessionId: string): Promise<SessionWithItems>
     .single();
 
   if (error) throw error;
-  return data as SessionWithItems;
+  return data as unknown as SessionWithItems;
 }
 
 export async function saveSessionItemAnswer(itemId: string, answer: number, isCorrect: boolean) {

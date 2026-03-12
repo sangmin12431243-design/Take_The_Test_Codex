@@ -28,7 +28,7 @@ export async function fetchProblems(userId: string, filters: ProblemFilters): Pr
   const { data, error } = await query;
 
   if (error) throw error;
-  return (data ?? []) as ProblemWithCategory[];
+  return (data ?? []) as unknown as ProblemWithCategory[];
 }
 
 export async function createProblem(userId: string, values: ProblemFormValues): Promise<void> {

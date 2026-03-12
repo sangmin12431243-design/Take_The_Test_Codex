@@ -20,7 +20,7 @@ const defaultValues: ProblemFormValues = {
 interface Props {
   categories: CategoryRow[];
   initialValues?: ProblemFormValues | null;
-  onSubmit: (values: ProblemFormValues) => Promise<void>;
+  onSubmit: (values: ProblemFormValues) => Promise<boolean>;
   onCancelEdit: () => void;
 }
 
@@ -47,8 +47,8 @@ export function ProblemForm({ categories, initialValues, onSubmit, onCancelEdit 
         className="mt-3 grid gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
-          await onSubmit(values);
-          if (!initialValues) setValues(defaultValues);
+          const submitted = await onSubmit(values);
+          if (submitted && !initialValues) setValues(defaultValues);
         }}
       >
         <select

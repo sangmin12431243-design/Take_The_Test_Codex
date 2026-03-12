@@ -82,3 +82,159 @@ alter table public.problems enable row level security;
 alter table public.problem_stats enable row level security;
 alter table public.quiz_sessions enable row level security;
 alter table public.quiz_session_items enable row level security;
+
+create policy "users_select_own"
+on public.users for select
+to authenticated
+using (auth.uid() = id);
+
+create policy "users_insert_own"
+on public.users for insert
+to authenticated
+with check (auth.uid() = id);
+
+create policy "users_update_own"
+on public.users for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
+
+create policy "categories_select_own"
+on public.categories for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "categories_insert_own"
+on public.categories for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "categories_update_own"
+on public.categories for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "categories_delete_own"
+on public.categories for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "problems_select_own"
+on public.problems for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "problems_insert_own"
+on public.problems for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "problems_update_own"
+on public.problems for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "problems_delete_own"
+on public.problems for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "problem_stats_select_own"
+on public.problem_stats for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "problem_stats_insert_own"
+on public.problem_stats for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "problem_stats_update_own"
+on public.problem_stats for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "problem_stats_delete_own"
+on public.problem_stats for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "quiz_sessions_select_own"
+on public.quiz_sessions for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "quiz_sessions_insert_own"
+on public.quiz_sessions for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "quiz_sessions_update_own"
+on public.quiz_sessions for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "quiz_sessions_delete_own"
+on public.quiz_sessions for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "quiz_session_items_select_own"
+on public.quiz_session_items for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.quiz_sessions
+    where quiz_sessions.id = quiz_session_items.session_id
+      and quiz_sessions.user_id = auth.uid()
+  )
+);
+
+create policy "quiz_session_items_insert_own"
+on public.quiz_session_items for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.quiz_sessions
+    where quiz_sessions.id = quiz_session_items.session_id
+      and quiz_sessions.user_id = auth.uid()
+  )
+);
+
+create policy "quiz_session_items_update_own"
+on public.quiz_session_items for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.quiz_sessions
+    where quiz_sessions.id = quiz_session_items.session_id
+      and quiz_sessions.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.quiz_sessions
+    where quiz_sessions.id = quiz_session_items.session_id
+      and quiz_sessions.user_id = auth.uid()
+  )
+);
+
+create policy "quiz_session_items_delete_own"
+on public.quiz_session_items for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.quiz_sessions
+    where quiz_sessions.id = quiz_session_items.session_id
+      and quiz_sessions.user_id = auth.uid()
+  )
+);

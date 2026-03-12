@@ -2,15 +2,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { fetchSession, type SessionWithItems } from "@/lib/queries/quiz";
 
-export default function QuizResultPage({ params }: { params: { id: string } }) {
+export default function QuizResultPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [session, setSession] = useState<SessionWithItems | null>(null);
 
   useEffect(() => {
-    fetchSession(params.id).then(setSession).catch(console.error);
-  }, [params.id]);
+    fetchSession(id).then(setSession).catch(console.error);
+  }, [id]);
 
   const items = useMemo(
     () => [...(session?.quiz_session_items ?? [])].sort((a, b) => a.shown_order - b.shown_order),

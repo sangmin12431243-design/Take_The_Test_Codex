@@ -1,0 +1,26 @@
+   ▲ Next.js 15.2.1
+   - Local:        http://localhost:3010
+   - Network:      http://172.30.1.97:3010
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1908ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.9s (813 modules)
+ GET / 200 in 4296ms
+ GET / 200 in 59ms
+ GET / 200 in 38ms
+ ○ Compiling /problems ...
+ ✓ Compiled /problems in 808ms (836 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /problems 200 in 1035ms
+ GET / 200 in 23ms
+ ✓ Compiled /quiz/setup in 462ms (833 modules)
+ GET /quiz/setup 200 in 614ms
+ ✓ Compiled /quiz/play/[id] in 363ms (842 modules)
+ GET /quiz/play/83f9cfff-2aa4-408d-a8f8-f63f9388a73f 200 in 1075ms
+ ✓ Compiled /quiz/result/[id] in 393ms (849 modules)
+ GET /quiz/result/83f9cfff-2aa4-408d-a8f8-f63f9388a73f 200 in 1045ms
+ GET / 200 in 24ms
+ GET /problems 200 in 23ms
+^C

@@ -33,6 +33,7 @@ export interface Database {
           name?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -52,6 +53,7 @@ export interface Database {
           name?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       problems: {
         Row: {
@@ -102,6 +104,7 @@ export interface Database {
           is_active?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
       problem_stats: {
         Row: {
@@ -143,6 +146,7 @@ export interface Database {
           mastered_at?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       quiz_sessions: {
         Row: {
@@ -184,6 +188,7 @@ export interface Database {
           finished_at?: string | null;
           score?: number | null;
         };
+        Relationships: [];
       };
       quiz_session_items: {
         Row: {
@@ -209,6 +214,7 @@ export interface Database {
           is_correct?: boolean | null;
           starred_at_exam_time?: boolean;
         };
+        Relationships: [];
       };
     };
     Views: {

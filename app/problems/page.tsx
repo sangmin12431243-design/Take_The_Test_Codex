@@ -48,6 +48,25 @@ export default function ProblemsPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProblemsTab>("single");
 
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) return error.message;
+    return "문제를 처리하는 중 오류가 발생했습니다.";
+  };
+
+  const runMutation = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setErrorMessage(null);
+    try {
+      await action();
+      return true;
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const loadAll = useCallback(async () => {
     if (!user?.id) return;
     setBusy(true);
@@ -69,7 +88,7 @@ export default function ProblemsPage() {
 
   const isAuthReady = useMemo(() => !loading && Boolean(user), [loading, user]);
 
-  if (!isAuthReady) {
+  if (!isAuthReady || !user) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
         <div className="mb-6">
@@ -84,6 +103,8 @@ export default function ProblemsPage() {
       </main>
     );
   }
+
+  const userId = user.id;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6">
@@ -101,8 +122,10 @@ export default function ProblemsPage() {
       <CategoryManager
         categories={categories}
         onCreate={async (name) => {
-          await createCategory(user.id, name);
-          await loadAll();
+          return runMutation(async () => {
+            await createCategory(userId, name);
+            await loadAll();
+          });
         }}
       />
 
@@ -135,17 +158,19 @@ export default function ProblemsPage() {
           initialValues={editing ? toFormValues(editing) : null}
           onCancelEdit={() => setEditing(null)}
           onSubmit={async (values) => {
-            if (editing?.id) {
-              await updateProblem(editing.id, values);
-              setEditing(null);
-            } else {
-              await createProblem(user.id, values);
-            }
-            await loadAll();
+            return runMutation(async () => {
+              if (editing?.id) {
+                await updateProblem(editing.id, values);
+                setEditing(null);
+              } else {
+                await createProblem(userId, values);
+              }
+              await loadAll();
+            });
           }}
         />
       ) : (
-        <ProblemCsvUpload userId={user.id} categories={categories} onUploaded={loadAll} />
+        <ProblemCsvUpload userId={userId} categories={categories} onUploaded={loadAll} />
       )}
 
       <ProblemFiltersBar categories={categories} filters={filters} onChange={setFilters} />
@@ -165,9 +190,11 @@ export default function ProblemsPage() {
             setActiveTab("single");
           }}
           onDeactivate={async (problemId) => {
-            await deactivateProblem(problemId);
-            if (editing?.id === problemId) setEditing(null);
-            await loadAll();
+            await runMutation(async () => {
+              await deactivateProblem(problemId);
+              if (editing?.id === problemId) setEditing(null);
+              await loadAll();
+            });
           }}
         />
       )}

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { applyProblemStats } from "@/lib/queries/problem-stats";
 import {
@@ -16,7 +16,8 @@ import {
 } from "@/lib/queries/quiz";
 import type { ExplanationState } from "@/types/quiz";
 
-export default function QuizPlayPage({ params }: { params: { id: string } }) {
+export default function QuizPlayPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [session, setSession] = useState<SessionWithItems | null>(null);
@@ -27,8 +28,8 @@ export default function QuizPlayPage({ params }: { params: { id: string } }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetchSession(params.id).then(setSession).catch(console.error);
-  }, [params.id]);
+    fetchSession(id).then(setSession).catch(console.error);
+  }, [id]);
 
   const items = useMemo(
     () => [...(session?.quiz_session_items ?? [])].sort((a, b) => a.shown_order - b.shown_order),

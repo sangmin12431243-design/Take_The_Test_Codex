@@ -5,7 +5,7 @@ import type { CategoryRow } from "@/types/problem-management";
 
 interface Props {
   categories: CategoryRow[];
-  onCreate: (name: string) => Promise<void>;
+  onCreate: (name: string) => Promise<boolean>;
 }
 
 export function CategoryManager({ categories, onCreate }: Props) {
@@ -25,8 +25,8 @@ export function CategoryManager({ categories, onCreate }: Props) {
           type="button"
           onClick={async () => {
             if (!name.trim()) return;
-            await onCreate(name);
-            setName("");
+            const created = await onCreate(name);
+            if (created) setName("");
           }}
           className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white"
         >
