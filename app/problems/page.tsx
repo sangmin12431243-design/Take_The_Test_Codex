@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { CategoryManager } from "@/components/problems/category-manager";
+import { ProblemCsvUpload } from "@/components/problems/problem-csv-upload";
 import { ProblemFiltersBar } from "@/components/problems/problem-filters";
 import { ProblemForm } from "@/components/problems/problem-form";
 import { ProblemList } from "@/components/problems/problem-list";
@@ -11,6 +12,7 @@ import { createCategory, fetchCategories } from "@/lib/queries/categories";
 import { createProblem, deactivateProblem, fetchProblems, updateProblem } from "@/lib/queries/problems";
 import type { ProblemFilters, ProblemFormValues, ProblemWithCategory } from "@/types/problem-management";
 import type { CategoryRow } from "@/types/problem-management";
+import type { ProblemsTab } from "@/types/problem-csv";
 
 const initialFilters: ProblemFilters = {
   categoryId: "",
@@ -44,16 +46,14 @@ export default function ProblemsPage() {
   const [editing, setEditing] = useState<ProblemWithCategory | null>(null);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ProblemsTab>("single");
 
   const loadAll = useCallback(async () => {
     if (!user?.id) return;
     setBusy(true);
     setErrorMessage(null);
     try {
-      const [nextCategories, nextProblems] = await Promise.all([
-        fetchCategories(user.id),
-        fetchProblems(user.id, filters),
-      ]);
+      const [nextCategories, nextProblems] = await Promise.all([fetchCategories(user.id), fetchProblems(user.id, filters)]);
       setCategories(nextCategories);
       setProblems(nextProblems);
     } catch (error) {
@@ -106,20 +106,47 @@ export default function ProblemsPage() {
         }}
       />
 
-      <ProblemForm
-        categories={categories}
-        initialValues={editing ? toFormValues(editing) : null}
-        onCancelEdit={() => setEditing(null)}
-        onSubmit={async (values) => {
-          if (editing?.id) {
-            await updateProblem(editing.id, values);
-            setEditing(null);
-          } else {
-            await createProblem(user.id, values);
-          }
-          await loadAll();
-        }}
-      />
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("single")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              activeTab === "single" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            단일 추가
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("csv")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              activeTab === "csv" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            CSV 업로드
+          </button>
+        </div>
+      </section>
+
+      {activeTab === "single" ? (
+        <ProblemForm
+          categories={categories}
+          initialValues={editing ? toFormValues(editing) : null}
+          onCancelEdit={() => setEditing(null)}
+          onSubmit={async (values) => {
+            if (editing?.id) {
+              await updateProblem(editing.id, values);
+              setEditing(null);
+            } else {
+              await createProblem(user.id, values);
+            }
+            await loadAll();
+          }}
+        />
+      ) : (
+        <ProblemCsvUpload userId={user.id} categories={categories} onUploaded={loadAll} />
+      )}
 
       <ProblemFiltersBar categories={categories} filters={filters} onChange={setFilters} />
 
@@ -132,7 +159,11 @@ export default function ProblemsPage() {
       ) : (
         <ProblemList
           problems={problems}
-          onEdit={setEditing}
+
+          onEdit={(problem) => {
+            setEditing(problem);
+            setActiveTab("single");
+          }}
           onDeactivate={async (problemId) => {
             await deactivateProblem(problemId);
             if (editing?.id === problemId) setEditing(null);
