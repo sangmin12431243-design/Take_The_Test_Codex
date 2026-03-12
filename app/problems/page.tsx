@@ -1,0 +1,145 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
+import { CategoryManager } from "@/components/problems/category-manager";
+import { ProblemFiltersBar } from "@/components/problems/problem-filters";
+import { ProblemForm } from "@/components/problems/problem-form";
+import { ProblemList } from "@/components/problems/problem-list";
+import { createCategory, fetchCategories } from "@/lib/queries/categories";
+import { createProblem, deactivateProblem, fetchProblems, updateProblem } from "@/lib/queries/problems";
+import type { ProblemFilters, ProblemFormValues, ProblemWithCategory } from "@/types/problem-management";
+import type { CategoryRow } from "@/types/problem-management";
+
+const initialFilters: ProblemFilters = {
+  categoryId: "",
+  difficulty: "all",
+  active: "all",
+  keyword: "",
+};
+
+function toFormValues(problem: ProblemWithCategory): ProblemFormValues {
+  return {
+    id: problem.id,
+    category_id: problem.category_id,
+    question_text: problem.question_text,
+    choice_1: problem.choice_1,
+    choice_2: problem.choice_2,
+    choice_3: problem.choice_3,
+    choice_4: problem.choice_4,
+    correct_answer: problem.correct_answer,
+    explanation: problem.explanation ?? "",
+    difficulty: problem.difficulty,
+    order_index: problem.order_index,
+    is_active: problem.is_active,
+  };
+}
+
+export default function ProblemsPage() {
+  const { user, loading } = useAuth();
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [problems, setProblems] = useState<ProblemWithCategory[]>([]);
+  const [filters, setFilters] = useState<ProblemFilters>(initialFilters);
+  const [editing, setEditing] = useState<ProblemWithCategory | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadAll = useCallback(async () => {
+    if (!user?.id) return;
+    setBusy(true);
+    setErrorMessage(null);
+    try {
+      const [nextCategories, nextProblems] = await Promise.all([
+        fetchCategories(user.id),
+        fetchProblems(user.id, filters),
+      ]);
+      setCategories(nextCategories);
+      setProblems(nextProblems);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "데이터 조회 중 오류가 발생했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, filters]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
+  const isAuthReady = useMemo(() => !loading && Boolean(user), [loading, user]);
+
+  if (!isAuthReady) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
+            ← 첫 페이지로
+          </Link>
+        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold">문제 관리</h1>
+          <p className="mt-2 text-sm text-slate-600">로그인 후 본인 문제를 관리할 수 있습니다.</p>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6">
+      <div>
+        <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
+          ← 첫 페이지로
+        </Link>
+      </div>
+
+      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-bold">문제 관리</h1>
+        <p className="mt-2 text-sm text-slate-600">로그인 사용자 본인의 문제만 조회/추가/수정/비활성화할 수 있습니다.</p>
+      </header>
+
+      <CategoryManager
+        categories={categories}
+        onCreate={async (name) => {
+          await createCategory(user.id, name);
+          await loadAll();
+        }}
+      />
+
+      <ProblemForm
+        categories={categories}
+        initialValues={editing ? toFormValues(editing) : null}
+        onCancelEdit={() => setEditing(null)}
+        onSubmit={async (values) => {
+          if (editing?.id) {
+            await updateProblem(editing.id, values);
+            setEditing(null);
+          } else {
+            await createProblem(user.id, values);
+          }
+          await loadAll();
+        }}
+      />
+
+      <ProblemFiltersBar categories={categories} filters={filters} onChange={setFilters} />
+
+      {errorMessage && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</div>
+      )}
+
+      {busy ? (
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">데이터를 불러오는 중...</div>
+      ) : (
+        <ProblemList
+          problems={problems}
+          onEdit={setEditing}
+          onDeactivate={async (problemId) => {
+            await deactivateProblem(problemId);
+            if (editing?.id === problemId) setEditing(null);
+            await loadAll();
+          }}
+        />
+      )}
+    </main>
+  );
+}
