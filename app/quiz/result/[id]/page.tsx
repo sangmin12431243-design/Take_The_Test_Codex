@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -58,4 +59,5 @@ export default function QuizResultPage({ params }: { params: { id: string } }) {
       </section>
     </main>
   );
+
 }
