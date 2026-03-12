@@ -54,14 +54,4 @@
 - 검색/필터(카테고리, 난이도, 활성 여부, 키워드)
 - 반응형 목록 UI(모바일 카드, PC 테이블)
 - 퀴즈 출제용 조회는 `is_active=true`만 사용하도록 분리 함수 제공
-- CSV 일괄 업로드 탭 추가(템플릿 다운로드, 미리보기, 유효성 검증, 행 번호 오류 표시)
-- CSV 업로드 시 카테고리 자동 생성 + problems/problem_stats 일괄 생성
 
-
-## 문제 풀이 시스템
-- `/quiz/setup`: 카테고리(복수), 순서(sequential/random), 해설 표시, 문제 수, 채점 방식(instant/final) 설정 및 세션 생성
-- `/quiz/play/[id]`: 진행률, 4지선다 풀이, 별표, 해설 3단계( idle → armed → visible )
-- `/quiz/result/[id]`: 총문항/정답/오답/점수/오답 목록
-- `/wrong-notes`: 오답 통계 기반 목록, 정렬/필터, 숙지 체크
-- `/starred`: 별표 문제 목록
-- `/resume`: 진행중 세션 이어풀기

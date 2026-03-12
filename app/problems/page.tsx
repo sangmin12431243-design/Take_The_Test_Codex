@@ -159,6 +159,7 @@ export default function ProblemsPage() {
       ) : (
         <ProblemList
           problems={problems}
+
           onEdit={(problem) => {
             setEditing(problem);
             setActiveTab("single");
