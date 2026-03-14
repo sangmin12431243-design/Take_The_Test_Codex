@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { ProblemImage } from "@/components/problem-image";
 import { parseProblemsWorkbook, triggerCsvTemplateDownload, validateCsvRows } from "@/lib/csv/problem-csv";
 import { createProblemsFromCsv } from "@/lib/queries/problems";
@@ -19,10 +19,41 @@ interface UploadSummary {
 }
 
 const PAGE_SIZE = 10;
+const TEXT = {
+  active: "\uD65C\uC131",
+  inactive: "\uBE44\uD65C\uC131",
+  uploadSuccess: "\uC5C5\uB85C\uB4DC\uC5D0 \uC131\uACF5\uD588\uC2B5\uB2C8\uB2E4",
+  emptyData: "XLSX \uB370\uC774\uD130\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.",
+  readError: "XLSX \uD30C\uC77C\uC744 \uC77D\uB294 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.",
+  selectFileFirst: "\uC5C5\uB85C\uB4DC\uD560 XLSX \uD30C\uC77C\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.",
+  fixValidationFirst: "\uC720\uD6A8\uC131 \uC624\uB958\uB97C \uBA3C\uC800 \uD574\uACB0\uD574 \uC8FC\uC138\uC694.",
+  uploadError: "XLSX \uC5C5\uB85C\uB4DC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.",
+  title: "XLSX \uC5C5\uB85C\uB4DC",
+  description:
+    "`\uCE74\uD14C\uACE0\uB9AC`, `\uBB38\uC81C`, `\uBB38\uD56D1~4`, `\uC815\uB2F5`, `\uD574\uC124`, `\uD65C\uC131\uC5EC\uBD80` \uD615\uC2DD\uC73C\uB85C \uC5C5\uB85C\uB4DC\uD558\uC138\uC694.",
+  sampleTemplate: "\uC0D8\uD50C \uD15C\uD50C\uB9BF",
+  uploading: "\uC5C5\uB85C\uB4DC \uC911...",
+  validationTitle: "\uC720\uD6A8\uC131 \uC624\uB958",
+  rowPrefix: "\uD589",
+  resultPrefix: "\uC5C5\uB85C\uB4DC \uACB0\uACFC:",
+  createdProblems: "\uBB38\uC81C",
+  createdCategories: "\uC2E0\uADDC \uCE74\uD14C\uACE0\uB9AC",
+  createdSuffix: "\uAC1C \uC0DD\uC131",
+  category: "\uCE74\uD14C\uACE0\uB9AC",
+  question: "\uBB38\uC81C",
+  imageUrl: "\uC774\uBBF8\uC9C0 URL",
+  imagePreviewAlt: "\uC5C5\uB85C\uB4DC \uBB38\uC81C \uC774\uBBF8\uC9C0 \uBBF8\uB9AC\uBCF4\uAE30",
+  correct: "\uC815\uB2F5",
+  choice: "\uBB38\uD56D",
+  explanation: "\uD574\uC124",
+  previous: "\uC774\uC804",
+  next: "\uB2E4\uC74C",
+} as const;
 
 function normalizeActiveValue(value: string) {
-  const normalized = value.trim().toLowerCase();
-  return ["활성", "true", "yes", "y", "예"].includes(value.trim()) || ["true", "yes", "y"].includes(normalized);
+  const trimmed = value.trim();
+  const normalized = trimmed.toLowerCase();
+  return [TEXT.active, "true", "yes", "y", "1"].includes(trimmed) || ["true", "yes", "y", "1"].includes(normalized);
 }
 
 function getPageNumbers(currentPage: number, totalPages: number) {
@@ -35,13 +66,21 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
   const [rows, setRows] = useState<ParsedCsvProblemRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<UploadSummary | null>(null);
   const [page, setPage] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const validation = useMemo(() => validateCsvRows(rows), [rows]);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pagedRows = useMemo(() => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [page, rows]);
   const pageNumbers = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = window.setTimeout(() => setToastMessage(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [toastMessage]);
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -58,10 +97,10 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
       const buffer = await file.arrayBuffer();
       const parsedRows = parseProblemsWorkbook(buffer);
       setRows(parsedRows);
-      if (parsedRows.length === 0) setMessage("XLSX 데이터가 비어 있습니다.");
+      if (parsedRows.length === 0) setMessage(TEXT.emptyData);
     } catch (error) {
       setRows([]);
-      setMessage(error instanceof Error ? error.message : "XLSX 파일을 읽는 중 오류가 발생했습니다.");
+      setMessage(error instanceof Error ? error.message : TEXT.readError);
     }
   };
 
@@ -71,12 +110,12 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
 
   const handleUpload = async () => {
     if (rows.length === 0) {
-      setMessage("업로드할 XLSX 파일을 먼저 선택해 주세요.");
+      setMessage(TEXT.selectFileFirst);
       return;
     }
 
     if (validation.errors.length > 0) {
-      setMessage("유효성 오류를 먼저 해결해 주세요.");
+      setMessage(TEXT.fixValidationFirst);
       return;
     }
 
@@ -85,10 +124,13 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
     try {
       const result = await createProblemsFromCsv(userId, validation.validRows, categories);
       setSummary(result);
-      setMessage("XLSX 업로드가 완료되었습니다.");
+      setRows([]);
+      setPage(1);
+      setToastMessage(TEXT.uploadSuccess);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await onUploaded();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "XLSX 업로드 중 오류가 발생했습니다.");
+      setMessage(error instanceof Error ? error.message : TEXT.uploadError);
     } finally {
       setBusy(false);
     }
@@ -96,12 +138,16 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {toastMessage && (
+        <div className="mb-4 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm">
+          {toastMessage}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">XLSX 업로드</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            `카테고리`, `문제`, `문항1~4`, `정답`, `해설`, `활성여부` 형식으로 업로드하세요.
-          </p>
+          <h2 className="text-lg font-semibold">{TEXT.title}</h2>
+          <p className="mt-2 text-sm text-slate-600">{TEXT.description}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -109,21 +155,22 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
             onClick={triggerCsvTemplateDownload}
             className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
           >
-            샘플 템플릿
+            {TEXT.sampleTemplate}
           </button>
           <button
             type="button"
             disabled={busy || rows.length === 0 || validation.validRows.length === 0 || validation.errors.length > 0}
             onClick={handleUpload}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 hover:text_white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {busy ? "업로드 중..." : "XLSX 업로드"}
+            {busy ? TEXT.uploading : TEXT.title}
           </button>
         </div>
       </div>
 
       <div className="mt-4">
         <input
+          ref={fileInputRef}
           type="file"
           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           onChange={onFileChange}
@@ -135,10 +182,12 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
 
       {validation.errors.length > 0 && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          <p className="font-semibold">유효성 오류</p>
+          <p className="font-semibold">{TEXT.validationTitle}</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             {validation.errors.map((error, index) => (
-              <li key={`${error.rowNumber}-${index}`}>행 {error.rowNumber}: {error.message}</li>
+              <li key={`${error.rowNumber}-${index}`}>
+                {TEXT.rowPrefix} {error.rowNumber}: {error.message}
+              </li>
             ))}
           </ul>
         </div>
@@ -146,7 +195,9 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
 
       {summary && (
         <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          업로드 결과: 문제 {summary.createdProblems}개 생성, 신규 카테고리 {summary.createdCategories}개 생성
+          {TEXT.resultPrefix} {TEXT.createdProblems} {summary.createdProblems}
+          {TEXT.createdSuffix}, {TEXT.createdCategories} {summary.createdCategories}
+          {TEXT.createdSuffix}
         </div>
       )}
 
@@ -160,7 +211,9 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
               className={`rounded-2xl border p-4 shadow-sm ${isActive ? "border-emerald-200 bg-emerald-50/50" : "border-rose-200 bg-rose-50/50"}`}
             >
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">행 {row.rowNumber}</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  {TEXT.rowPrefix} {row.rowNumber}
+                </span>
                 <select
                   value={row.raw.is_active}
                   onChange={(e) =>
@@ -171,8 +224,8 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                   }
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 >
-                  <option value="활성">활성</option>
-                  <option value="비활성">비활성</option>
+                  <option value={TEXT.active}>{TEXT.active}</option>
+                  <option value={TEXT.inactive}>{TEXT.inactive}</option>
                 </select>
               </div>
 
@@ -185,7 +238,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                       raw: { ...current.raw, category: e.target.value },
                     }))
                   }
-                  placeholder="카테고리"
+                  placeholder={TEXT.category}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
 
@@ -197,7 +250,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                       raw: { ...current.raw, question_text: e.target.value },
                     }))
                   }
-                  placeholder="문제"
+                  placeholder={TEXT.question}
                   className="min-h-24 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
 
@@ -209,11 +262,11 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                       raw: { ...current.raw, image_url: e.target.value },
                     }))
                   }
-                  placeholder="이미지 URL"
+                  placeholder={TEXT.imageUrl}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
 
-                <ProblemImage src={row.raw.image_url} alt="업로드 문제 이미지 미리보기" />
+                <ProblemImage src={row.raw.image_url} alt={TEXT.imagePreviewAlt} />
 
                 {(["choice_1", "choice_2", "choice_3", "choice_4"] as const).map((key, choiceIndex) => {
                   const selected = Number(row.raw.correct_answer) === choiceIndex + 1;
@@ -231,7 +284,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                           selected ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-700"
                         }`}
                       >
-                        {selected ? "정답" : `${choiceIndex + 1}`}
+                        {selected ? TEXT.correct : `${choiceIndex + 1}`}
                       </button>
                       <input
                         value={row.raw[key]}
@@ -241,7 +294,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                             raw: { ...current.raw, [key]: e.target.value },
                           }))
                         }
-                        placeholder={`문항 ${choiceIndex + 1}`}
+                        placeholder={`${TEXT.choice} ${choiceIndex + 1}`}
                         className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                       />
                     </div>
@@ -256,7 +309,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
                       raw: { ...current.raw, explanation: e.target.value },
                     }))
                   }
-                  placeholder="해설"
+                  placeholder={TEXT.explanation}
                   className="min-h-20 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
               </div>
@@ -273,7 +326,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40"
           >
-            이전
+            {TEXT.previous}
           </button>
           {pageNumbers.map((pageNumber) => (
             <button
@@ -293,7 +346,7 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40"
           >
-            다음
+            {TEXT.next}
           </button>
         </div>
       )}
@@ -304,9 +357,9 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
             type="button"
             disabled={busy || validation.validRows.length === 0 || validation.errors.length > 0}
             onClick={handleUpload}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 hover:text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {busy ? "업로드 중..." : "XLSX 업로드"}
+            {busy ? TEXT.uploading : TEXT.title}
           </button>
         </div>
       )}
