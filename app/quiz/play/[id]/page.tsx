@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemImage } from "@/components/problem-image";
 import { dequeueProblemForEdit, getQueuedProblemIds, queueProblemForEdit, subscribeProblemEditQueue } from "@/lib/problem-edit-queue";
 import { updateProblemExplanation } from "@/lib/queries/problems";
@@ -131,7 +132,11 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
     return buildShuffledChoices(current.id, question);
   }, [current, question]);
 
-  if (loading || !user || !session || !current || !question) {
+  if (loading || !user) {
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-3xl" backHref="/" />;
+  }
+
+  if (!session || !current || !question) {
     return (
       <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
         <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">

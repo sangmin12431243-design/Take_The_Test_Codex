@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemImage } from "@/components/problem-image";
 import { dequeueProblemForEdit, getQueuedProblemIds, subscribeProblemEditQueue } from "@/lib/problem-edit-queue";
 import { fetchCategories } from "@/lib/queries/categories";
@@ -53,7 +54,7 @@ export default function ProblemEditPage() {
   }, [load, user?.id]);
 
   if (loading || !user) {
-    return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-4xl" />;
   }
 
   const setField = <K extends keyof ProblemFormValues>(problemId: string, key: K, value: ProblemFormValues[K]) => {

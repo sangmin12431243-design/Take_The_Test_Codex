@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { fetchCategories } from "@/lib/queries/categories";
 import { createQuizSession } from "@/lib/queries/quiz";
 import type { CategoryRow } from "@/types/problem-management";
@@ -42,12 +43,13 @@ export default function QuizSetupPage() {
 
   if (loading || !user) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
-        <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-          홈으로
-        </Link>
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6">로그인 후 문제 풀이 설정을 사용할 수 있습니다.</div>
-      </main>
+      <AuthFallback
+        loading={loading}
+        isAuthenticated={Boolean(user)}
+        maxWidth="max-w-3xl"
+        backHref="/"
+        unauthenticatedMessage="로그인 후 문제 풀이 설정을 사용할 수 있습니다."
+      />
     );
   }
 

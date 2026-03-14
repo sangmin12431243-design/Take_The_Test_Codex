@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemFiltersBar } from "@/components/problems/problem-filters";
 import { ProblemList } from "@/components/problems/problem-list";
 import { fetchCategories } from "@/lib/queries/categories";
@@ -55,7 +56,7 @@ export default function ProblemsListPage() {
   }, [load]);
 
   if (loading || !user) {
-    return <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-5xl" />;
   }
 
   return (

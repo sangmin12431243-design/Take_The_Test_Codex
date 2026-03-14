@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { fetchCategories } from "@/lib/queries/categories";
 import { fetchStarredProblems, fetchWrongNotes } from "@/lib/queries/problem-stats";
 import { createSourceQuizSession } from "@/lib/queries/quiz";
@@ -53,7 +54,7 @@ export default function SourceQuizSetupPage({ params }: { params: Promise<{ sour
   const availableCount = useMemo(() => allowedProblemIds.length, [allowedProblemIds]);
 
   if (loading || !user) {
-    return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-3xl" />;
   }
 
   return (

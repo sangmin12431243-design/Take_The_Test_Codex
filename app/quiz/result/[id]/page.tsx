@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemImage } from "@/components/problem-image";
 import { dequeueProblemForEdit, getQueuedProblemIds, queueProblemForEdit, subscribeProblemEditQueue } from "@/lib/problem-edit-queue";
 import { updateProblemExplanation } from "@/lib/queries/problems";
@@ -61,7 +62,11 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  if (loading || !user || !session) {
+  if (loading || !user) {
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-5xl" />;
+  }
+
+  if (!session) {
     return <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6">불러오는 중...</main>;
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemReviewList } from "@/components/problem-review-list";
 import { clearWrongNote, fetchWrongNotes, updateMastered } from "@/lib/queries/problem-stats";
 
@@ -32,7 +33,7 @@ export default function WrongNotesPage() {
   }, [items, masteredBottom, showMastered, sort]);
 
   if (loading || !user) {
-    return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
+    return <AuthFallback loading={loading} isAuthenticated={Boolean(user)} maxWidth="max-w-4xl" />;
   }
 
   return (
