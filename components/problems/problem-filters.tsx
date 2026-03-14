@@ -51,6 +51,17 @@ export function ProblemFiltersBar({ categories, filters, onChange }: Props) {
           <option value="active">활성</option>
           <option value="inactive">비활성</option>
         </select>
+
+        <select
+          value={filters.sort}
+          onChange={(e) => onChange({ ...filters, sort: e.target.value as ProblemFilters["sort"] })}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option value="latest">최신 추가순</option>
+          <option value="oldest">오래된 순</option>
+          <option value="asc">오름차순</option>
+          <option value="desc">내림차순</option>
+        </select>
       </div>
     </section>
   );

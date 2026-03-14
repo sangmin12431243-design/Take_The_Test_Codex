@@ -3,14 +3,17 @@ import type { ValidatedCsvProblemRow } from "@/types/problem-csv";
 import type { CategoryRow, ProblemFilters, ProblemFormValues, ProblemWithCategory } from "@/types/problem-management";
 
 export async function fetchProblems(userId: string, filters: ProblemFilters): Promise<ProblemWithCategory[]> {
+  const sortByCreatedAt = filters.sort === "latest" || filters.sort === "oldest";
+  const sortByQuestionText = filters.sort === "asc" || filters.sort === "desc";
   let query = supabase
     .from("problems")
     .select(
       "id,user_id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty,is_active,created_at,updated_at,categories(id,name)",
     )
     .eq("user_id", userId)
-    .order("order_index", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order(sortByCreatedAt ? "created_at" : sortByQuestionText ? "question_text" : "order_index", {
+      ascending: filters.sort === "oldest" || filters.sort === "asc",
+    });
 
   if (filters.categoryId) {
     query = query.eq("category_id", filters.categoryId);
@@ -152,6 +155,13 @@ export async function updateProblemExplanation(problemId: string, explanation: s
 
 export async function deleteProblem(problemId: string): Promise<void> {
   const { error } = await supabase.from("problems").delete().eq("id", problemId);
+  if (error) throw error;
+}
+
+export async function deleteProblems(problemIds: string[]): Promise<void> {
+  if (problemIds.length === 0) return;
+
+  const { error } = await supabase.from("problems").delete().in("id", problemIds);
   if (error) throw error;
 }
 

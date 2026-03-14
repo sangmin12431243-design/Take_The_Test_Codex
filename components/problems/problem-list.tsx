@@ -11,6 +11,7 @@ interface Props {
   onEdit: (problem: ProblemWithCategory | null) => void;
   onUpdate: (problemId: string, values: ProblemFormValues) => Promise<void>;
   onDelete: (problemId: string) => Promise<void>;
+  onDeleteSelected: (problemIds: string[]) => Promise<void>;
   onToggleStar: (problemId: string, starred: boolean) => Promise<void>;
 }
 
@@ -38,13 +39,17 @@ function toFormValues(problem: ProblemWithCategory): ProblemFormValues {
   };
 }
 
-export function ProblemList({ categories, problems, editingProblem, onEdit, onUpdate, onDelete, onToggleStar }: Props) {
+export function ProblemList({ categories, problems, editingProblem, onEdit, onUpdate, onDelete, onDeleteSelected, onToggleStar }: Props) {
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState<ProblemFormValues | null>(editingProblem ? toFormValues(editingProblem) : null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProblemIds, setSelectedProblemIds] = useState<string[]>([]);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const totalPages = Math.max(1, Math.ceil(problems.length / PAGE_SIZE));
   const pagedProblems = useMemo(() => problems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [page, problems]);
   const pageNumbers = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
+  const allSelected = problems.length > 0 && selectedProblemIds.length === problems.length;
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -54,29 +59,97 @@ export function ProblemList({ categories, problems, editingProblem, onEdit, onUp
     setDraft(editingProblem ? toFormValues(editingProblem) : null);
   }, [editingProblem]);
 
+  useEffect(() => {
+    setSelectedProblemIds((prev) => prev.filter((problemId) => problems.some((problem) => problem.id === problemId)));
+  }, [problems]);
+
   const setField = <K extends keyof ProblemFormValues>(key: K, value: ProblemFormValues[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
+
+  const toggleSelected = (problemId: string, checked: boolean) => {
+    setSelectedProblemIds((prev) => {
+      if (checked) {
+        return prev.includes(problemId) ? prev : [...prev, problemId];
+      }
+      return prev.filter((id) => id !== problemId);
+    });
   };
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-semibold">문제 목록</h2>
-        <span className="text-xs text-slate-500">
-          총 {problems.length}개 · {page}/{totalPages} 페이지
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">
+            총 {problems.length}개 · {page}/{totalPages} 페이지
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectionMode((prev) => !prev);
+              setSelectedProblemIds([]);
+              onEdit(null);
+            }}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+              selectionMode ? "border border-slate-300 text-slate-700" : "bg-red-600 text-white"
+            }`}
+          >
+            {selectionMode ? "선택 삭제 닫기" : "선택 삭제"}
+          </button>
+        </div>
       </div>
+
+      {selectionMode && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => setSelectedProblemIds(e.target.checked ? problems.map((problem) => problem.id) : [])}
+            />
+            전체 선택
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">{selectedProblemIds.length}개 선택됨</span>
+            <button
+              type="button"
+              disabled={deleteBusy || selectedProblemIds.length === 0}
+              onClick={async () => {
+                setDeleteBusy(true);
+                try {
+                  await onDeleteSelected(selectedProblemIds);
+                  setSelectedProblemIds([]);
+                  setSelectionMode(false);
+                } finally {
+                  setDeleteBusy(false);
+                }
+              }}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              선택한 문제 삭제
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {pagedProblems.map((problem) => {
           const expanded = editingProblem?.id === problem.id && draft;
+          const checked = selectedProblemIds.includes(problem.id);
           return (
             <article key={problem.id} className="overflow-hidden rounded-2xl border border-slate-200">
               <div className="flex items-start gap-3 p-4">
+                {selectionMode && (
+                  <label className="mt-1 flex items-center">
+                    <input type="checkbox" checked={checked} onChange={(e) => toggleSelected(problem.id, e.target.checked)} />
+                  </label>
+                )}
                 <button
                   type="button"
+                  disabled={selectionMode}
                   onClick={() => void onToggleStar(problem.id, !problem.starred)}
-                  className={`mt-0.5 text-xl leading-none ${problem.starred ? "text-amber-500" : "text-slate-300"}`}
+                  className={`mt-0.5 text-xl leading-none ${problem.starred ? "text-amber-500" : "text-slate-300"} disabled:cursor-not-allowed disabled:opacity-50`}
                   aria-label={problem.starred ? "별표 해제" : "별표"}
                 >
                   {problem.starred ? "★" : "☆"}
@@ -94,15 +167,17 @@ export function ProblemList({ categories, problems, editingProblem, onEdit, onUp
                     <div className="flex shrink-0 gap-2">
                       <button
                         type="button"
+                        disabled={selectionMode}
                         onClick={() => onEdit(expanded ? null : problem)}
-                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white"
+                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white disabled:opacity-50"
                       >
                         수정
                       </button>
                       <button
                         type="button"
+                        disabled={selectionMode}
                         onClick={() => void onDelete(problem.id)}
-                        className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600"
+                        className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600 disabled:opacity-50"
                       >
                         삭제
                       </button>

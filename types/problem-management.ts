@@ -27,4 +27,5 @@ export interface ProblemFilters {
   active: "all" | "active" | "inactive";
   starred: "all" | "starred" | "unstarred";
   keyword: string;
+  sort: "latest" | "oldest" | "asc" | "desc";
 }

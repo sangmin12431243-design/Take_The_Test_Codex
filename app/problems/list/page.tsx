@@ -7,7 +7,7 @@ import { AuthFallback } from "@/components/auth-fallback";
 import { ProblemFiltersBar } from "@/components/problems/problem-filters";
 import { ProblemList } from "@/components/problems/problem-list";
 import { fetchCategories } from "@/lib/queries/categories";
-import { deleteProblem, fetchProblems, updateProblem } from "@/lib/queries/problems";
+import { deleteProblem, deleteProblems, fetchProblems, updateProblem } from "@/lib/queries/problems";
 import { setProblemStar } from "@/lib/queries/quiz";
 import type { CategoryRow, ProblemFilters, ProblemWithCategory } from "@/types/problem-management";
 
@@ -16,6 +16,7 @@ const initialFilters: ProblemFilters = {
   active: "all",
   starred: "all",
   keyword: "",
+  sort: "latest",
 };
 
 export default function ProblemsListPage() {
@@ -69,7 +70,7 @@ export default function ProblemsListPage() {
 
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">문제 목록</h1>
-        <p className="mt-2 text-sm text-slate-600">별표, 상태, 카테고리, 검색 조건으로 문제를 관리할 수 있습니다.</p>
+        <p className="mt-2 text-sm text-slate-600">별표, 상태, 카테고리, 정렬, 검색 조건으로 문제를 관리할 수 있습니다.</p>
       </section>
 
       <div className="mt-4">
@@ -97,6 +98,13 @@ export default function ProblemsListPage() {
             onDelete={async (problemId) => {
               await deleteProblem(problemId);
               if (editing?.id === problemId) setEditing(null);
+              await load();
+            }}
+            onDeleteSelected={async (problemIds) => {
+              await deleteProblems(problemIds);
+              if (editing && problemIds.includes(editing.id)) {
+                setEditing(null);
+              }
               await load();
             }}
             onToggleStar={async (problemId, starred) => {
