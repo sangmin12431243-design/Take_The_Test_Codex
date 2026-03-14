@@ -49,7 +49,8 @@ export function ProblemList({ categories, problems, editingProblem, onEdit, onUp
   const totalPages = Math.max(1, Math.ceil(problems.length / PAGE_SIZE));
   const pagedProblems = useMemo(() => problems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [page, problems]);
   const pageNumbers = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
-  const allSelected = problems.length > 0 && selectedProblemIds.length === problems.length;
+  const pagedProblemIds = useMemo(() => pagedProblems.map((problem) => problem.id), [pagedProblems]);
+  const allSelected = pagedProblemIds.length > 0 && pagedProblemIds.every((problemId) => selectedProblemIds.includes(problemId));
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -106,7 +107,14 @@ export function ProblemList({ categories, problems, editingProblem, onEdit, onUp
             <input
               type="checkbox"
               checked={allSelected}
-              onChange={(e) => setSelectedProblemIds(e.target.checked ? problems.map((problem) => problem.id) : [])}
+              onChange={(e) =>
+                setSelectedProblemIds((prev) => {
+                  if (e.target.checked) {
+                    return Array.from(new Set([...prev, ...pagedProblemIds]));
+                  }
+                  return prev.filter((problemId) => !pagedProblemIds.includes(problemId));
+                })
+              }
             />
             전체 선택
           </label>
