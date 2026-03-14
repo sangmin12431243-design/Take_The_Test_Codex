@@ -6,7 +6,7 @@ type CategoryQueryResult = {
   error: Error | null;
 };
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs = 10000) {
+function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = 10000) {
   return Promise.race<T>([
     promise,
     new Promise<T>((_, reject) => {
@@ -20,10 +20,10 @@ export async function fetchCategories(userId: string): Promise<CategoryRow[]> {
     .from("categories")
     .select("id, user_id, name, created_at")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true }) as Promise<CategoryQueryResult>;
+    .order("created_at", { ascending: true });
 
   const { data, error } = await withTimeout<CategoryQueryResult>(
-    categoryPromise,
+    categoryPromise as PromiseLike<CategoryQueryResult>,
   );
 
   if (error) throw error;
