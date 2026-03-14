@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { ensureUserProfile } from "@/lib/queries/users";
@@ -17,21 +18,56 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
 });
 
+const SESSION_TIMEOUT_MS = 60 * 60 * 1000;
+const SESSION_ACTIVITY_KEY = "take-the-test:last-activity-at";
+
+function readLastActivity() {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(SESSION_ACTIVITY_KEY);
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function writeLastActivity(timestamp = Date.now()) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SESSION_ACTIVITY_KEY, String(timestamp));
+}
+
+function clearLastActivity() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SESSION_ACTIVITY_KEY);
+}
+
+function isExpired(lastActivity: number | null, now = Date.now()) {
+  if (!lastActivity) return false;
+  return now - lastActivity > SESSION_TIMEOUT_MS;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     let mounted = true;
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
+      if (data.session && isExpired(readLastActivity())) {
+        await supabase.auth.signOut();
+        clearLastActivity();
+        setSession(null);
+        setLoading(false);
+        return;
+      }
       if (data.session?.user) {
         try {
           await ensureUserProfile(data.session.user);
         } catch (error) {
           console.error("Failed to sync user profile", error);
         }
+        if (!readLastActivity()) writeLastActivity();
       }
       setSession(data.session);
       setLoading(false);
@@ -39,13 +75,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (event === "SIGNED_OUT") {
+        clearLastActivity();
+      }
+      if (nextSession && isExpired(readLastActivity())) {
+        await supabase.auth.signOut();
+        clearLastActivity();
+        setSession(null);
+        setLoading(false);
+        return;
+      }
       if (nextSession?.user) {
         try {
           await ensureUserProfile(nextSession.user);
         } catch (error) {
           console.error("Failed to sync user profile", error);
         }
+        if (event === "SIGNED_IN") writeLastActivity();
       }
       setSession(nextSession);
       setLoading(false);
@@ -56,6 +103,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || !pathname) return;
+    writeLastActivity();
+  }, [pathname, session]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const timer = window.setInterval(async () => {
+      if (!isExpired(readLastActivity())) return;
+      await supabase.auth.signOut();
+      clearLastActivity();
+      setSession(null);
+    }, 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [session]);
 
   const value = useMemo(
     () => ({
