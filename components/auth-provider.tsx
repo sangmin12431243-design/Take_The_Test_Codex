@@ -44,6 +44,15 @@ function isExpired(lastActivity: number | null, now = Date.now()) {
   return now - lastActivity > SESSION_TIMEOUT_MS;
 }
 
+async function expireSession() {
+  clearLastActivity();
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error("Failed to sign out expired session", error);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,48 +61,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      if (data.session && isExpired(readLastActivity())) {
-        await supabase.auth.signOut();
-        clearLastActivity();
-        setSession(null);
-        setLoading(false);
-        return;
-      }
-      if (data.session?.user) {
-        try {
-          await ensureUserProfile(data.session.user);
-        } catch (error) {
-          console.error("Failed to sync user profile", error);
+    const initialize = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (data.session && isExpired(readLastActivity())) {
+          setSession(null);
+          setLoading(false);
+          void expireSession();
+          return;
         }
-        if (!readLastActivity()) writeLastActivity();
+        if (data.session?.user) {
+          try {
+            await ensureUserProfile(data.session.user);
+          } catch (error) {
+            console.error("Failed to sync user profile", error);
+          }
+          if (!readLastActivity()) writeLastActivity();
+        }
+        if (!mounted) return;
+        setSession(data.session);
+      } catch (error) {
+        console.error("Failed to restore auth session", error);
+        if (!mounted) return;
+        setSession(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setSession(data.session);
-      setLoading(false);
-    });
+    };
+
+    void initialize();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return;
+
       if (event === "SIGNED_OUT") {
-        clearLastActivity();
-      }
-      if (nextSession && isExpired(readLastActivity())) {
-        await supabase.auth.signOut();
         clearLastActivity();
         setSession(null);
         setLoading(false);
         return;
       }
+
+      if (nextSession && isExpired(readLastActivity())) {
+        setSession(null);
+        setLoading(false);
+        void expireSession();
+        return;
+      }
+
       if (nextSession?.user) {
-        try {
-          await ensureUserProfile(nextSession.user);
-        } catch (error) {
+        void ensureUserProfile(nextSession.user).catch((error) => {
           console.error("Failed to sync user profile", error);
-        }
+        });
         if (event === "SIGNED_IN") writeLastActivity();
       }
+
       setSession(nextSession);
       setLoading(false);
     });
