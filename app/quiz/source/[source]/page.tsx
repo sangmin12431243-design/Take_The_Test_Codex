@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { fetchCategories } from "@/lib/queries/categories";
-import { createQuizSession } from "@/lib/queries/quiz";
+import { fetchStarredProblems, fetchWrongNotes } from "@/lib/queries/problem-stats";
+import { createSourceQuizSession } from "@/lib/queries/quiz";
 import type { CategoryRow } from "@/types/problem-management";
-import type { QuizSetupValues } from "@/types/quiz";
+import type { QuizSetupValues, QuizSourcePage } from "@/types/quiz";
 
 const initialValues: QuizSetupValues = {
   selectedCategoryIds: [],
@@ -17,59 +18,58 @@ const initialValues: QuizSetupValues = {
   answerMode: "instant",
 };
 
-export default function QuizSetupPage() {
+const sourceLabels: Record<QuizSourcePage, string> = {
+  wrong_note: "오답 노트",
+  starred: "별표 문제",
+};
+
+export default function SourceQuizSetupPage({ params }: { params: Promise<{ source: QuizSourcePage }> }) {
+  const { source } = use(params);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [allowedProblemIds, setAllowedProblemIds] = useState<string[]>([]);
   const [values, setValues] = useState<QuizSetupValues>(initialValues);
   const [busy, setBusy] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
 
-    setLoadingCategories(true);
-    setCategoryError(null);
-    fetchCategories(user.id)
-      .then(setCategories)
-      .catch((error) => {
-        setCategories([]);
-        setCategoryError(error instanceof Error ? error.message : "카테고리를 불러오지 못했습니다.");
-      })
-      .finally(() => setLoadingCategories(false));
-  }, [user?.id]);
+    const load = async () => {
+      const [allCategories, sourceItems] = await Promise.all([
+        fetchCategories(user.id),
+        source === "wrong_note" ? fetchWrongNotes(user.id) : fetchStarredProblems(user.id),
+      ]);
+
+      const problemIds = sourceItems.map((item: any) => item.problem_id);
+      const categoryIds = Array.from(new Set(sourceItems.map((item: any) => item.problems?.category_id).filter(Boolean)));
+      setAllowedProblemIds(problemIds);
+      setCategories(allCategories.filter((category) => categoryIds.includes(category.id)));
+    };
+
+    void load();
+  }, [source, user?.id]);
+
+  const availableCount = useMemo(() => allowedProblemIds.length, [allowedProblemIds]);
 
   if (loading || !user) {
-    return (
-      <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
-        <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-          홈으로
-        </Link>
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6">로그인 후 문제 풀이 설정을 사용할 수 있습니다.</div>
-      </main>
-    );
+    return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
   }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6">
-      <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-        홈으로
+      <Link href={`/${source === "wrong_note" ? "wrong-notes" : "starred"}`} className="text-sm font-semibold text-brand-700 hover:underline">
+        돌아가기
       </Link>
 
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">문제 풀이 설정</h1>
-        <p className="mt-2 text-sm text-slate-600">문제와 보기 순서는 자동으로 랜덤 출제됩니다.</p>
+        <h1 className="text-2xl font-bold">{sourceLabels[source]} 문제 풀이</h1>
+        <p className="mt-2 text-sm text-slate-600">현재 목록 안의 문제 {availableCount}개에서만 출제됩니다.</p>
 
         <div className="mt-5 space-y-5 text-sm">
           <div>
             <p className="mb-2 font-semibold">카테고리 선택</p>
-            {loadingCategories && <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">카테고리 불러오는 중...</div>}
-            {categoryError && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{categoryError}</div>}
-            {!loadingCategories && !categoryError && categories.length === 0 && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">등록된 카테고리가 없습니다.</div>
-            )}
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {categories.map((category) => {
                 const checked = values.selectedCategoryIds.includes(category.id);
                 return (
@@ -129,11 +129,11 @@ export default function QuizSetupPage() {
 
         <button
           type="button"
-          disabled={busy || loadingCategories}
+          disabled={busy || allowedProblemIds.length === 0}
           onClick={async () => {
             setBusy(true);
             try {
-              const sessionId = await createQuizSession(user.id, values);
+              const sessionId = await createSourceQuizSession(user.id, values, source, allowedProblemIds);
               router.push(`/quiz/play/${sessionId}`);
             } finally {
               setBusy(false);

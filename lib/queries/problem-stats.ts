@@ -59,12 +59,22 @@ export async function applyProblemStats(inputs: AnswerStatInput[]) {
 export async function fetchWrongNotes(userId: string) {
   const { data, error } = await supabase
     .from("problem_stats")
-    .select("id,problem_id,wrong_count,correct_count,total_solved_count,mastered,mastered_at,problems(id,question_text)")
+    .select(
+      "id,problem_id,wrong_count,correct_count,total_solved_count,mastered,mastered_at,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
+    )
     .eq("user_id", userId)
     .gt("wrong_count", 0);
 
   if (error) throw error;
   return (data ?? []) as unknown[];
+}
+
+export async function clearWrongNote(problemStatId: string) {
+  const { error } = await supabase
+    .from("problem_stats")
+    .update({ wrong_count: 0, last_wrong_at: null, updated_at: new Date().toISOString() })
+    .eq("id", problemStatId);
+  if (error) throw error;
 }
 
 export async function updateMastered(problemStatId: string, mastered: boolean) {
@@ -79,7 +89,9 @@ export async function updateMastered(problemStatId: string, mastered: boolean) {
 export async function fetchStarredProblems(userId: string) {
   const { data, error } = await supabase
     .from("problem_stats")
-    .select("id,problem_id,starred,problems(id,question_text,difficulty,order_index)")
+    .select(
+      "id,problem_id,starred,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
+    )
     .eq("user_id", userId)
     .eq("starred", true)
     .order("updated_at", { ascending: false });

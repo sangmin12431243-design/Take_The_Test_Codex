@@ -62,6 +62,7 @@ export interface Database {
           category_id: string | null;
           order_index: number;
           question_text: string;
+          image_url: string | null;
           choice_1: string;
           choice_2: string;
           choice_3: string;
@@ -79,6 +80,7 @@ export interface Database {
           category_id?: string | null;
           order_index?: number;
           question_text: string;
+          image_url?: string | null;
           choice_1: string;
           choice_2: string;
           choice_3: string;
@@ -94,6 +96,7 @@ export interface Database {
           category_id?: string | null;
           order_index?: number;
           question_text?: string;
+          image_url?: string | null;
           choice_1?: string;
           choice_2?: string;
           choice_3?: string;

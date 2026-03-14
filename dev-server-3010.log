@@ -537,3 +537,11 @@ Require stack:
  GET /wrong-notes 200 in 33ms
  GET /starred 200 in 30ms
  GET /resume 200 in 33ms
+ ⨯ ./node_modules/next/dist/lib/require-instrumentation-client.js:11:1
+Module not found: Can't resolve 'private-next-instrumentation-client'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./node_modules/next/dist/client/app-next-dev.js
+^C

@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent } from "react";
+import { ProblemImage } from "@/components/problem-image";
 import { parseProblemsWorkbook, triggerCsvTemplateDownload, validateCsvRows } from "@/lib/csv/problem-csv";
 import { createProblemsFromCsv } from "@/lib/queries/problems";
+import type { ParsedCsvProblemRow } from "@/types/problem-csv";
 import type { CategoryRow } from "@/types/problem-management";
-import type { CsvValidationError, ParsedCsvProblemRow } from "@/types/problem-csv";
 
 interface ProblemCsvUploadProps {
   userId: string;
@@ -17,53 +18,65 @@ interface UploadSummary {
   createdCategories: number;
 }
 
+const PAGE_SIZE = 10;
+
+function normalizeActiveValue(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return ["활성", "true", "yes", "y", "예"].includes(value.trim()) || ["true", "yes", "y"].includes(normalized);
+}
+
+function getPageNumbers(currentPage: number, totalPages: number) {
+  const start = Math.floor((currentPage - 1) / 10) * 10 + 1;
+  const end = Math.min(totalPages, start + 9);
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
 export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvUploadProps) {
-  const [parsedRows, setParsedRows] = useState<ParsedCsvProblemRow[]>([]);
-  const [errors, setErrors] = useState<CsvValidationError[]>([]);
+  const [rows, setRows] = useState<ParsedCsvProblemRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<UploadSummary | null>(null);
+  const [page, setPage] = useState(1);
 
-  const validRows = useMemo(() => validateCsvRows(parsedRows).validRows, [parsedRows]);
+  const validation = useMemo(() => validateCsvRows(rows), [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pagedRows = useMemo(() => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [page, rows]);
+  const pageNumbers = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setMessage(null);
     setSummary(null);
+    setPage(1);
 
     if (!file) {
-      setParsedRows([]);
-      setErrors([]);
+      setRows([]);
       return;
     }
 
     try {
       const buffer = await file.arrayBuffer();
-      const rows = parseProblemsWorkbook(buffer);
-      const validation = validateCsvRows(rows);
-      setParsedRows(rows);
-      setErrors(validation.errors);
-      if (rows.length === 0) {
-        setMessage("XLSX 데이터가 비어 있습니다.");
-      }
+      const parsedRows = parseProblemsWorkbook(buffer);
+      setRows(parsedRows);
+      if (parsedRows.length === 0) setMessage("XLSX 데이터가 비어 있습니다.");
     } catch (error) {
-      setParsedRows([]);
-      setErrors([]);
-      setMessage(error instanceof Error ? error.message : "XLSX 파싱 중 오류가 발생했습니다.");
+      setRows([]);
+      setMessage(error instanceof Error ? error.message : "XLSX 파일을 읽는 중 오류가 발생했습니다.");
     }
   };
 
+  const updateRow = (rowIndex: number, updater: (row: ParsedCsvProblemRow) => ParsedCsvProblemRow) => {
+    setRows((prev) => prev.map((row, index) => (index === rowIndex ? updater(row) : row)));
+  };
+
   const handleUpload = async () => {
-    if (parsedRows.length === 0) {
-      setMessage("업로드할 XLSX 파일을 먼저 선택하세요.");
+    if (rows.length === 0) {
+      setMessage("업로드할 XLSX 파일을 먼저 선택해 주세요.");
       return;
     }
 
-    const validation = validateCsvRows(parsedRows);
-    setErrors(validation.errors);
-
     if (validation.errors.length > 0) {
-      setMessage("유효성 오류를 먼저 해결해주세요.");
+      setMessage("유효성 오류를 먼저 해결해 주세요.");
       return;
     }
 
@@ -84,20 +97,30 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">XLSX 업로드</h2>
-        <button
-          type="button"
-          onClick={triggerCsvTemplateDownload}
-          className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
-        >
-          한글 템플릿 다운로드
-        </button>
+        <div>
+          <h2 className="text-lg font-semibold">XLSX 업로드</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            `카테고리`, `문제`, `문항1~4`, `정답`, `해설`, `활성여부` 형식으로 업로드하세요.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={triggerCsvTemplateDownload}
+            className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
+          >
+            샘플 템플릿
+          </button>
+          <button
+            type="button"
+            disabled={busy || rows.length === 0 || validation.validRows.length === 0 || validation.errors.length > 0}
+            onClick={handleUpload}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 hover:text_white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
+          >
+            {busy ? "업로드 중..." : "XLSX 업로드"}
+          </button>
+        </div>
       </div>
-
-      <p className="mt-2 text-sm text-slate-600">
-        한글 헤더 `카테고리`, `문제순서`, `문제`, `선지1~4`, `정답번호`, `해설`, `난이도`, `활성여부`를 사용하세요.
-        기존 영문 헤더 파일도 같이 지원합니다.
-      </p>
 
       <div className="mt-4">
         <input
@@ -110,11 +133,11 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
 
       {message && <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">{message}</div>}
 
-      {errors.length > 0 && (
+      {validation.errors.length > 0 && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <p className="font-semibold">유효성 오류</p>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {errors.map((error, index) => (
+            {validation.errors.map((error, index) => (
               <li key={`${error.rowNumber}-${index}`}>행 {error.rowNumber}: {error.message}</li>
             ))}
           </ul>
@@ -127,45 +150,166 @@ export function ProblemCsvUpload({ userId, categories, onUploaded }: ProblemCsvU
         </div>
       )}
 
-      {parsedRows.length > 0 && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-            <thead className="bg-slate-50 text-left">
-              <tr>
-                <th className="px-3 py-2">행</th>
-                <th className="px-3 py-2">카테고리</th>
-                <th className="px-3 py-2">문제순서</th>
-                <th className="px-3 py-2">문제</th>
-                <th className="px-3 py-2">난이도</th>
-                <th className="px-3 py-2">활성여부</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {parsedRows.map((row) => (
-                <tr key={`${row.rowNumber}-${row.raw.question_text}`}>
-                  <td className="px-3 py-2">{row.rowNumber}</td>
-                  <td className="px-3 py-2">{row.raw.category}</td>
-                  <td className="px-3 py-2">{row.raw.order_index}</td>
-                  <td className="px-3 py-2">{row.raw.question_text}</td>
-                  <td className="px-3 py-2">{row.raw.difficulty}</td>
-                  <td className="px-3 py-2">{row.raw.is_active}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="mt-4 space-y-4">
+        {pagedRows.map((row, indexOnPage) => {
+          const rowIndex = (page - 1) * PAGE_SIZE + indexOnPage;
+          const isActive = normalizeActiveValue(row.raw.is_active);
+          return (
+            <article
+              key={`${row.rowNumber}-${rowIndex}`}
+              className={`rounded-2xl border p-4 shadow-sm ${isActive ? "border-emerald-200 bg-emerald-50/50" : "border-rose-200 bg-rose-50/50"}`}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500">행 {row.rowNumber}</span>
+                <select
+                  value={row.raw.is_active}
+                  onChange={(e) =>
+                    updateRow(rowIndex, (current) => ({
+                      ...current,
+                      raw: { ...current.raw, is_active: e.target.value },
+                    }))
+                  }
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="활성">활성</option>
+                  <option value="비활성">비활성</option>
+                </select>
+              </div>
+
+              <div className="grid gap-3">
+                <input
+                  value={row.raw.category}
+                  onChange={(e) =>
+                    updateRow(rowIndex, (current) => ({
+                      ...current,
+                      raw: { ...current.raw, category: e.target.value },
+                    }))
+                  }
+                  placeholder="카테고리"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+
+                <textarea
+                  value={row.raw.question_text}
+                  onChange={(e) =>
+                    updateRow(rowIndex, (current) => ({
+                      ...current,
+                      raw: { ...current.raw, question_text: e.target.value },
+                    }))
+                  }
+                  placeholder="문제"
+                  className="min-h-24 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+
+                <input
+                  value={row.raw.image_url}
+                  onChange={(e) =>
+                    updateRow(rowIndex, (current) => ({
+                      ...current,
+                      raw: { ...current.raw, image_url: e.target.value },
+                    }))
+                  }
+                  placeholder="이미지 URL"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+
+                <ProblemImage src={row.raw.image_url} alt="업로드 문제 이미지 미리보기" />
+
+                {(["choice_1", "choice_2", "choice_3", "choice_4"] as const).map((key, choiceIndex) => {
+                  const selected = Number(row.raw.correct_answer) === choiceIndex + 1;
+                  return (
+                    <div key={key} className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateRow(rowIndex, (current) => ({
+                            ...current,
+                            raw: { ...current.raw, correct_answer: String(choiceIndex + 1) },
+                          }))
+                        }
+                        className={`w-14 rounded-lg border px-3 py-2 text-sm font-semibold ${
+                          selected ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-slate-700"
+                        }`}
+                      >
+                        {selected ? "정답" : `${choiceIndex + 1}`}
+                      </button>
+                      <input
+                        value={row.raw[key]}
+                        onChange={(e) =>
+                          updateRow(rowIndex, (current) => ({
+                            ...current,
+                            raw: { ...current.raw, [key]: e.target.value },
+                          }))
+                        }
+                        placeholder={`문항 ${choiceIndex + 1}`}
+                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                      />
+                    </div>
+                  );
+                })}
+
+                <textarea
+                  value={row.raw.explanation}
+                  onChange={(e) =>
+                    updateRow(rowIndex, (current) => ({
+                      ...current,
+                      raw: { ...current.raw, explanation: e.target.value },
+                    }))
+                  }
+                  placeholder="해설"
+                  className="min-h-20 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {rows.length > PAGE_SIZE && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            disabled={page === 1}
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40"
+          >
+            이전
+          </button>
+          {pageNumbers.map((pageNumber) => (
+            <button
+              key={pageNumber}
+              type="button"
+              onClick={() => setPage(pageNumber)}
+              className={`min-w-9 rounded-lg px-3 py-2 text-sm ${
+                page === pageNumber ? "bg-slate-900 text-white" : "border border-slate-300 text-slate-700"
+              }`}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button
+            type="button"
+            disabled={page === totalPages}
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40"
+          >
+            다음
+          </button>
         </div>
       )}
 
-      <div className="mt-4">
-        <button
-          type="button"
-          disabled={busy || parsedRows.length === 0 || errors.length > 0 || validRows.length === 0}
-          onClick={handleUpload}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          {busy ? "업로드 중..." : "XLSX 업로드"}
-        </button>
-      </div>
+      {rows.length > 0 && (
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            disabled={busy || validation.validRows.length === 0 || validation.errors.length > 0}
+            onClick={handleUpload}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm ring-1 ring-brand-500/20 hover:bg-brand-700 hover:text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
+          >
+            {busy ? "업로드 중..." : "XLSX 업로드"}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

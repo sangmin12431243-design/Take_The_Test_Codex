@@ -3,14 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { ProblemReviewList } from "@/components/problem-review-list";
 import { fetchStarredProblems } from "@/lib/queries/problem-stats";
-
-function difficultyLabel(value?: string | null) {
-  if (value === "easy") return "쉬움";
-  if (value === "medium") return "보통";
-  if (value === "hard") return "어려움";
-  return "-";
-}
+import { setProblemStar } from "@/lib/queries/quiz";
 
 export default function StarredPage() {
   const { user, loading } = useAuth();
@@ -25,23 +20,32 @@ export default function StarredPage() {
     return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
   }
 
+  const load = async () => {
+    const nextItems = await fetchStarredProblems(user.id);
+    setItems(nextItems);
+  };
+
   return (
-    <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">
-      <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
-        홈으로
-      </Link>
+    <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
+          홈으로
+        </Link>
+        <Link href="/quiz/source/starred" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+          문제 풀기
+        </Link>
+      </div>
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold">별표 문제</h1>
-        <div className="mt-4 space-y-2">
-          {items.map((item) => (
-            <article key={item.id} className="rounded-lg border border-slate-200 p-3 text-sm">
-              <p className="font-medium">{item.problems?.question_text}</p>
-              <p className="mt-1 text-slate-600">
-                난이도: {difficultyLabel(item.problems?.difficulty)} · 순서: {item.problems?.order_index}
-              </p>
-            </article>
-          ))}
-          {items.length === 0 && <p className="text-sm text-slate-500">별표한 문제가 없습니다.</p>}
+        <div className="mt-4">
+          <ProblemReviewList
+            items={items}
+            emptyMessage="별표한 문제가 없습니다."
+            onRemove={async (item) => {
+              await setProblemStar(user.id, item.problem_id, false);
+              await load();
+            }}
+          />
         </div>
       </section>
     </main>

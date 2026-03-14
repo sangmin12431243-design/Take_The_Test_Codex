@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase/client";
-import type { AnswerMode, QuizMode } from "@/types/database";
+import type { AnswerMode, QuizMode, QuizSourceType } from "@/types/database";
 import type { QuizProblem, QuizSetupValues } from "@/types/quiz";
 
 export interface SessionWithItems {
   id: string;
   user_id: string;
+  started_at: string;
+  finished_at: string | null;
   mode: QuizMode;
   show_explanation: boolean;
   answer_mode: AnswerMode;
@@ -35,7 +37,7 @@ export async function fetchActiveProblemsByCategories(userId: string, categoryId
   let query = supabase
     .from("problems")
     .select(
-      "id,category_id,order_index,question_text,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty",
+"id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty",
     )
     .eq("user_id", userId)
     .eq("is_active", true);
@@ -85,9 +87,18 @@ function buildBalancedSelection(problems: QuizProblem[], categoryIds: string[], 
 
 export async function createQuizSession(userId: string, values: QuizSetupValues): Promise<string> {
   const allProblems = await fetchActiveProblemsByCategories(userId, values.selectedCategoryIds);
+  return createQuizSessionFromProblems(userId, values, allProblems, "normal");
+}
+
+async function createQuizSessionFromProblems(
+  userId: string,
+  values: QuizSetupValues,
+  allProblems: QuizProblem[],
+  sourceType: QuizSourceType,
+): Promise<string> {
   const totalCount = values.questionCount === "all" ? allProblems.length : values.questionCount;
-  const balanced = buildBalancedSelection(allProblems, values.selectedCategoryIds, totalCount);
-  const ordered = values.mode === "random" ? shuffle(balanced) : [...balanced].sort((a, b) => a.order_index - b.order_index);
+  const balanced = buildBalancedSelection(shuffle(allProblems), values.selectedCategoryIds, totalCount);
+  const ordered = shuffle(balanced);
 
   const { data: session, error: sessionError } = await supabase
     .from("quiz_sessions")
@@ -99,7 +110,7 @@ export async function createQuizSession(userId: string, values: QuizSetupValues)
       question_count: ordered.length,
       selected_categories: values.selectedCategoryIds,
       status: "in_progress",
-      source_type: "normal",
+      source_type: sourceType,
     })
     .select("id")
     .single();
@@ -121,11 +132,36 @@ export async function createQuizSession(userId: string, values: QuizSetupValues)
   return session.id;
 }
 
+export async function createSourceQuizSession(
+  userId: string,
+  values: QuizSetupValues,
+  sourceType: Extract<QuizSourceType, "wrong_note" | "starred">,
+  allowedProblemIds: string[],
+) {
+  let query = supabase
+    .from("problems")
+    .select(
+"id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty",
+    )
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .in("id", allowedProblemIds);
+
+  if (values.selectedCategoryIds.length > 0) {
+    query = query.in("category_id", values.selectedCategoryIds);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  const problems = (data ?? []) as unknown as QuizProblem[];
+  return createQuizSessionFromProblems(userId, values, problems, sourceType);
+}
+
 export async function fetchSession(sessionId: string): Promise<SessionWithItems> {
   const { data, error } = await supabase
     .from("quiz_sessions")
     .select(
-      "id,user_id,mode,show_explanation,answer_mode,question_count,status,score,quiz_session_items(id,problem_id,shown_order,user_answer,is_correct,starred_at_exam_time,problems(id,category_id,order_index,question_text,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty))",
+"id,user_id,started_at,finished_at,mode,show_explanation,answer_mode,question_count,status,score,quiz_session_items(id,problem_id,shown_order,user_answer,is_correct,starred_at_exam_time,problems(id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty))",
     )
     .eq("id", sessionId)
     .single();
@@ -138,6 +174,15 @@ export async function saveSessionItemAnswer(itemId: string, answer: number, isCo
   const { error } = await supabase
     .from("quiz_session_items")
     .update({ user_answer: answer, is_correct: isCorrect })
+    .eq("id", itemId);
+
+  if (error) throw error;
+}
+
+export async function saveSessionItemSelection(itemId: string, answer: number | null) {
+  const { error } = await supabase
+    .from("quiz_session_items")
+    .update({ user_answer: answer, is_correct: null })
     .eq("id", itemId);
 
   if (error) throw error;
@@ -197,4 +242,9 @@ export async function fetchInProgressSessions(userId: string) {
     .order("started_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function deleteInProgressSession(sessionId: string) {
+  const { error } = await supabase.from("quiz_sessions").delete().eq("id", sessionId).eq("status", "in_progress");
+  if (error) throw error;
 }

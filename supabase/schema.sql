@@ -21,6 +21,7 @@ create table if not exists public.problems (
   category_id uuid references public.categories(id) on delete set null,
   order_index integer not null default 0,
   question_text text not null,
+  image_url text,
   choice_1 text not null,
   choice_2 text not null,
   choice_3 text not null,
@@ -32,6 +33,9 @@ create table if not exists public.problems (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.problems
+add column if not exists image_url text;
 
 create table if not exists public.problem_stats (
   id uuid primary key default gen_random_uuid(),

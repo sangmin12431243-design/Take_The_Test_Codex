@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { fetchInProgressSessions } from "@/lib/queries/quiz";
+import { deleteInProgressSession, fetchInProgressSessions } from "@/lib/queries/quiz";
 
 function modeLabel(value: string) {
   return value === "random" ? "무작위" : "순서대로";
@@ -17,10 +17,15 @@ export default function ResumePage() {
   const { user, loading } = useAuth();
   const [sessions, setSessions] = useState<any[]>([]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user?.id) return;
-    fetchInProgressSessions(user.id).then(setSessions).catch(console.error);
+    const nextSessions = await fetchInProgressSessions(user.id);
+    setSessions(nextSessions);
   }, [user?.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (loading || !user) {
     return <main className="mx-auto min-h-screen w-full max-w-4xl px-4 py-8 sm:px-6">로그인 후 사용할 수 있습니다.</main>;
@@ -42,9 +47,21 @@ export default function ResumePage() {
                   문제 수 {session.question_count} · {modeLabel(session.mode)} · {answerModeLabel(session.answer_mode)}
                 </p>
               </div>
-              <Link href={`/quiz/play/${session.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white">
-                이어서 풀기
-              </Link>
+              <div className="flex gap-2">
+                <Link href={`/quiz/play/${session.id}`} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs text-white">
+                  이어서 풀기
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await deleteInProgressSession(session.id);
+                    await load();
+                  }}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600"
+                >
+                  삭제
+                </button>
+              </div>
             </article>
           ))}
           {sessions.length === 0 && <p className="text-sm text-slate-500">진행 중인 세션이 없습니다.</p>}

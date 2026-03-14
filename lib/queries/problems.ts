@@ -1,22 +1,19 @@
 import { supabase } from "@/lib/supabase/client";
-import type { ProblemFilters, ProblemFormValues, ProblemWithCategory } from "@/types/problem-management";
-import type { CategoryRow } from "@/types/problem-management";
 import type { ValidatedCsvProblemRow } from "@/types/problem-csv";
+import type { CategoryRow, ProblemFilters, ProblemFormValues, ProblemWithCategory } from "@/types/problem-management";
 
 export async function fetchProblems(userId: string, filters: ProblemFilters): Promise<ProblemWithCategory[]> {
   let query = supabase
     .from("problems")
     .select(
-      "id,user_id,category_id,order_index,question_text,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty,is_active,created_at,updated_at,categories(id,name)",
+      "id,user_id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty,is_active,created_at,updated_at,categories(id,name)",
     )
     .eq("user_id", userId)
-    .order("order_index", { ascending: true });
+    .order("order_index", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (filters.categoryId) {
     query = query.eq("category_id", filters.categoryId);
-  }
-  if (filters.difficulty !== "all") {
-    query = query.eq("difficulty", filters.difficulty);
   }
   if (filters.active !== "all") {
     query = query.eq("is_active", filters.active === "active");
@@ -25,39 +22,98 @@ export async function fetchProblems(userId: string, filters: ProblemFilters): Pr
     query = query.ilike("question_text", `%${filters.keyword.trim()}%`);
   }
 
-  const { data, error } = await query;
-
+  const [{ data, error }, { data: stats, error: statsError }] = await Promise.all([
+    query,
+    supabase.from("problem_stats").select("problem_id,starred").eq("user_id", userId),
+  ]);
   if (error) throw error;
-  return (data ?? []) as unknown as ProblemWithCategory[];
+  if (statsError) throw statsError;
+
+  const starredMap = new Map((stats ?? []).map((stat) => [stat.problem_id, Boolean(stat.starred)]));
+  const problems = ((data ?? []) as unknown as Omit<ProblemWithCategory, "starred">[]).map((problem) => ({
+    ...problem,
+    starred: starredMap.get(problem.id) ?? false,
+  }));
+
+  if (filters.starred === "starred") return problems.filter((problem) => problem.starred);
+  if (filters.starred === "unstarred") return problems.filter((problem) => !problem.starred);
+  return problems;
 }
 
-export async function createProblem(userId: string, values: ProblemFormValues): Promise<void> {
+export async function fetchProblemsByIds(userId: string, ids: string[]): Promise<ProblemWithCategory[]> {
+  if (ids.length === 0) return [];
+
+  const [{ data, error }, { data: stats, error: statsError }] = await Promise.all([
+    supabase
+      .from("problems")
+      .select(
+        "id,user_id,category_id,order_index,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,difficulty,is_active,created_at,updated_at,categories(id,name)",
+      )
+      .eq("user_id", userId)
+      .in("id", ids),
+    supabase.from("problem_stats").select("problem_id,starred").eq("user_id", userId).in("problem_id", ids),
+  ]);
+
+  if (error) throw error;
+  if (statsError) throw statsError;
+
+  const starredMap = new Map((stats ?? []).map((stat) => [stat.problem_id, Boolean(stat.starred)]));
+  const orderMap = new Map(ids.map((id, index) => [id, index]));
+
+  return ((data ?? []) as unknown as Omit<ProblemWithCategory, "starred">[])
+    .map((problem) => ({
+      ...problem,
+      starred: starredMap.get(problem.id) ?? false,
+    }))
+    .sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+}
+
+async function getNextOrderIndex(userId: string): Promise<number> {
   const { data, error } = await supabase
     .from("problems")
-    .insert({
-      user_id: userId,
-      category_id: values.category_id,
-      order_index: values.order_index,
-      question_text: values.question_text,
-      choice_1: values.choice_1,
-      choice_2: values.choice_2,
-      choice_3: values.choice_3,
-      choice_4: values.choice_4,
-      correct_answer: values.correct_answer,
-      explanation: values.explanation || null,
-      difficulty: values.difficulty,
-      is_active: values.is_active,
-    })
-    .select("id")
-    .single();
+    .select("order_index")
+    .eq("user_id", userId)
+    .order("order_index", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.order_index ?? 0) + 1;
+}
+
+export async function createProblems(userId: string, valuesList: ProblemFormValues[]): Promise<void> {
+  if (valuesList.length === 0) return;
+
+  const startOrderIndex = await getNextOrderIndex(userId);
+  const { data, error } = await supabase
+    .from("problems")
+    .insert(
+      valuesList.map((values, index) => ({
+        user_id: userId,
+        category_id: values.category_id,
+        order_index: startOrderIndex + index,
+        question_text: values.question_text,
+        image_url: values.image_url.trim() || null,
+        choice_1: values.choice_1,
+        choice_2: values.choice_2,
+        choice_3: values.choice_3,
+        choice_4: values.choice_4,
+        correct_answer: values.correct_answer,
+        explanation: values.explanation || null,
+        difficulty: "medium" as const,
+        is_active: values.is_active,
+      })),
+    )
+    .select("id");
 
   if (error) throw error;
 
-  const { error: statsError } = await supabase.from("problem_stats").insert({
-    user_id: userId,
-    problem_id: data.id,
-  });
+  const insertedProblems = data ?? [];
+  if (insertedProblems.length === 0) return;
 
+  const { error: statsError } = await supabase
+    .from("problem_stats")
+    .insert(insertedProblems.map((problem) => ({ user_id: userId, problem_id: problem.id })));
   if (statsError) throw statsError;
 }
 
@@ -66,15 +122,14 @@ export async function updateProblem(problemId: string, values: ProblemFormValues
     .from("problems")
     .update({
       category_id: values.category_id,
-      order_index: values.order_index,
       question_text: values.question_text,
+      image_url: values.image_url.trim() || null,
       choice_1: values.choice_1,
       choice_2: values.choice_2,
       choice_3: values.choice_3,
       choice_4: values.choice_4,
       correct_answer: values.correct_answer,
       explanation: values.explanation || null,
-      difficulty: values.difficulty,
       is_active: values.is_active,
       updated_at: new Date().toISOString(),
     })
@@ -83,12 +138,20 @@ export async function updateProblem(problemId: string, values: ProblemFormValues
   if (error) throw error;
 }
 
-export async function deactivateProblem(problemId: string): Promise<void> {
+export async function updateProblemExplanation(problemId: string, explanation: string): Promise<void> {
   const { error } = await supabase
     .from("problems")
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .update({
+      explanation: explanation || null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", problemId);
 
+  if (error) throw error;
+}
+
+export async function deleteProblem(problemId: string): Promise<void> {
+  const { error } = await supabase.from("problems").delete().eq("id", problemId);
   if (error) throw error;
 }
 
@@ -139,9 +202,9 @@ export async function createProblemsFromCsv(
     });
   }
 
-  const problemPayload = rows.map((row) => {
+  const startOrderIndex = await getNextOrderIndex(userId);
+  const problemPayload = rows.map((row, index) => {
     const category = categoryMap.get(row.categoryName.trim().toLowerCase());
-
     if (!category) {
       throw new Error(`카테고리를 찾을 수 없습니다: ${row.categoryName}`);
     }
@@ -149,15 +212,16 @@ export async function createProblemsFromCsv(
     return {
       user_id: userId,
       category_id: category.id,
-      order_index: row.order_index,
+      order_index: startOrderIndex + index,
       question_text: row.question_text,
+      image_url: row.image_url.trim() || null,
       choice_1: row.choice_1,
       choice_2: row.choice_2,
       choice_3: row.choice_3,
       choice_4: row.choice_4,
       correct_answer: row.correct_answer,
       explanation: row.explanation || null,
-      difficulty: row.difficulty,
+      difficulty: "medium" as const,
       is_active: row.is_active,
     };
   });
@@ -170,12 +234,10 @@ export async function createProblemsFromCsv(
   if (insertProblemsError) throw insertProblemsError;
 
   const problemIds = (insertedProblems ?? []).map((problem) => problem.id);
-
   if (problemIds.length > 0) {
     const { error: statsError } = await supabase
       .from("problem_stats")
       .insert(problemIds.map((problemId) => ({ user_id: userId, problem_id: problemId })));
-
     if (statsError) throw statsError;
   }
 

@@ -9,3 +9,30 @@
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
+
+@layer base {
+  button {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform, filter;
+    transition-duration: 180ms;
+    transition-timing-function: ease;
+  }
+}
+
+@layer components {
+  button.bg-slate-900:not(:disabled):hover,
+  button.bg-slate-900:not(:disabled):focus-visible {
+    background-color: rgb(30 41 59);
+  }
+
+  button.bg-brand-500:not(:disabled):hover,
+  button.bg-brand-600:not(:disabled):hover,
+  button.bg-brand-500:not(:disabled):focus-visible,
+  button.bg-brand-600:not(:disabled):focus-visible {
+    filter: brightness(1.06);
+  }
+
+  button:not(:disabled):hover,
+  button:not(:disabled):focus-visible {
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  }
+}
