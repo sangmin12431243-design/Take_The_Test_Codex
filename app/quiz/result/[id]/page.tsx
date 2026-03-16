@@ -109,7 +109,7 @@ export default function QuizResultPage({ params }: { params: Promise<{ id: strin
               <article key={item.id} className="rounded-2xl border border-slate-200 p-4 text-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium">
+                    <p className="whitespace-pre-wrap font-medium">
                       {(page - 1) * PAGE_SIZE + index + 1}. {item.problems.question_text}
                     </p>
                     <ProblemImage src={item.problems.image_url} alt="문제 이미지" className="mt-3 max-w-xl" />

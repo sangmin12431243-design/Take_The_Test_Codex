@@ -340,7 +340,7 @@ export default function QuizPlayPage({ params }: { params: Promise<{ id: string 
             </button>
           </div>
 
-          <h1 className="text-lg font-semibold">{question.question_text}</h1>
+          <h1 className="whitespace-pre-wrap text-lg font-semibold">{question.question_text}</h1>
           <ProblemImage src={question.image_url} alt="문제 이미지" className="mt-4" />
 
           <div className="mt-4 grid gap-2">

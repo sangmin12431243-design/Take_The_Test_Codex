@@ -166,7 +166,7 @@ export function ProblemList({ categories, problems, editingProblem, onEdit, onUp
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{problem.question_text}</p>
+                      <p className="whitespace-pre-wrap text-sm font-medium">{problem.question_text}</p>
                       <ProblemImage src={problem.image_url} alt="문제 이미지" className="mt-3 max-w-xl" />
                       <p className="mt-1 text-xs text-slate-500">
                         카테고리: {problem.categories?.name ?? "미분류"} · 상태: {problem.is_active ? "활성" : "비활성"}
