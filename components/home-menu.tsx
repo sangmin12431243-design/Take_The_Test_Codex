@@ -170,9 +170,6 @@ export function HomeMenu() {
                 href="/resume"
                 className="flex min-h-36 flex-col items-center justify-center gap-1 rounded-[28px] bg-black px-3 py-5 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:px-4 sm:py-6"
               >
-                <span className="text-4xl leading-none sm:text-5xl" aria-hidden="true">
-                  ⏯️
-                </span>
                 <span>
                   이어
                   <br />
@@ -189,7 +186,7 @@ export function HomeMenu() {
         </section>
       </section>
 
-      <div className="pointer-events-none fixed bottom-6 left-6 z-30 sm:bottom-8 sm:left-8 min-[1100px]:left-[max(2rem,calc((100vw-1100px)/2+1.5rem))]">
+      <div className="pointer-events-none fixed bottom-6 left-6 z-30 sm:bottom-8 sm:left-8 min-[1000px]:left-[calc(50%-500px+1rem)] sm:min-[1000px]:left-[calc(50%-500px+2rem)]">
         <div ref={menuRef} className="pointer-events-auto relative flex flex-col items-start gap-3">
           {menuOpen && (
             <div className="w-40 rounded-2xl bg-white p-2 shadow-2xl shadow-slate-300/60">

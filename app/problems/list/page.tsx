@@ -73,11 +73,6 @@ export default function ProblemsListPage() {
         </Link>
       </div>
 
-      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">문제 목록</h1>
-        <p className="mt-2 text-sm text-slate-600">별표, 상태, 카테고리, 정렬, 검색 조건으로 문제를 관리할 수 있습니다.</p>
-      </section>
-
       <div className="mt-4">
         <ProblemFiltersBar categories={categories} filters={filters} onChange={setFilters} />
       </div>
