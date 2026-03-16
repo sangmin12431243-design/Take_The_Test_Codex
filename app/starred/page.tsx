@@ -132,13 +132,23 @@ export default function StarredPage() {
               <button
                 type="button"
                 onClick={async () => {
-                  await setProblemStar(user.id, item.problem_id, false);
-                  await load();
+                  const nextStarred = !item.starred;
+                  setItems((prev) =>
+                    prev.map((current) => (current.id === item.id ? { ...current, starred: nextStarred } : current)),
+                  );
+                  try {
+                    await setProblemStar(user.id, item.problem_id, nextStarred);
+                  } catch (error) {
+                    setItems((prev) =>
+                      prev.map((current) => (current.id === item.id ? { ...current, starred: item.starred } : current)),
+                    );
+                    console.error("Failed to update star state", error);
+                  }
                 }}
-                className="text-2xl leading-none text-amber-500"
-                aria-label="별표 해제"
+                className={`text-2xl leading-none ${item.starred ? "text-amber-500" : "text-slate-300"}`}
+                aria-label={item.starred ? "별표 해제" : "별표"}
               >
-                ★
+                {item.starred ? "★" : "☆"}
               </button>
             )}
           />
