@@ -19,6 +19,8 @@ const initialFilters: ProblemFilters = {
   sort: "latest",
 };
 
+const topLinkClass = "rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100";
+
 export default function ProblemsListPage() {
   const { user, loading } = useAuth();
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -63,8 +65,11 @@ export default function ProblemsListPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/problems" className="text-sm font-semibold text-brand-700 hover:underline">
-          문제 관리로
+        <Link href="/" className={topLinkClass}>
+          홈으로
+        </Link>
+        <Link href="/problems" className={topLinkClass}>
+          문제 추가
         </Link>
       </div>
 

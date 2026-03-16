@@ -11,6 +11,8 @@ import { createProblems } from "@/lib/queries/problems";
 import type { ProblemsTab } from "@/types/problem-csv";
 import type { CategoryRow } from "@/types/problem-management";
 
+const topLinkClass = "rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100";
+
 export default function ProblemsPage() {
   const { user, loading } = useAuth();
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -63,9 +65,12 @@ export default function ProblemsPage() {
   if (!isAuthReady || !user) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <Link href="/" className={topLinkClass}>
             홈으로
+          </Link>
+          <Link href="/problems/list" className={topLinkClass}>
+            문제 목록
           </Link>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -80,18 +85,18 @@ export default function ProblemsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6">
-      <div>
-        <Link href="/" className="text-sm font-semibold text-brand-700 hover:underline">
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/" className={topLinkClass}>
           홈으로
+        </Link>
+        <Link href="/problems/list" className={topLinkClass}>
+          문제 목록
         </Link>
       </div>
 
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold">문제 관리</h1>
-        <p className="mt-2 text-sm text-slate-600">문제를 직접 추가하거나 XLSX로 업로드할 수 있습니다.</p>
-      </header>
-
-      {loadingCategories && <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">카테고리 불러오는 중...</div>}
+      {loadingCategories && (
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">카테고리를 불러오는 중...</div>
+      )}
 
       <CategoryManager
         categories={categories}
@@ -129,9 +134,6 @@ export default function ProblemsPage() {
           >
             XLSX 업로드
           </button>
-          <Link href="/problems/list" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
-            문제 목록
-          </Link>
         </div>
       </section>
 

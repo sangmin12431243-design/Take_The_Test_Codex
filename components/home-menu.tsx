@@ -23,7 +23,7 @@ function MenuButton({ href, label, emoji, className }: MenuButtonProps) {
     <Link
       href={href}
       className={classNames(
-        "flex min-h-24 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
+        "flex min-h-36 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
         className,
       )}
     >
@@ -155,7 +155,7 @@ export function HomeMenu() {
             <Link
               href="/quiz/setup"
               className={classNames(
-                "flex min-h-24 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
+                "flex min-h-36 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
                 hasResumeSession ? "col-span-3 bg-sky-100 hover:bg-sky-200" : "bg-sky-100 hover:bg-sky-200",
               )}
             >
@@ -168,65 +168,65 @@ export function HomeMenu() {
             {hasResumeSession && (
               <Link
                 href="/resume"
-                className="flex min-h-24 items-center justify-center rounded-[28px] bg-black px-3 py-5 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:px-4 sm:py-6"
+                className="flex min-h-36 items-center justify-center rounded-[28px] bg-black px-3 py-5 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:px-4 sm:py-6"
               >
                 이어풀기
               </Link>
             )}
           </div>
 
-          <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-4 sm:gap-5">
             <MenuButton href="/wrong-notes" label="오답 노트" emoji="📄" className="bg-rose-100 hover:bg-rose-200" />
             <MenuButton href="/starred" label="별표 문제" emoji="⭐" className="bg-amber-100 hover:bg-amber-200" />
           </div>
         </section>
-
-        <div className="pointer-events-none mt-auto flex justify-start pt-4">
-          <div ref={menuRef} className="pointer-events-auto relative flex flex-col items-start gap-3">
-            {menuOpen && (
-              <div className="w-40 rounded-2xl bg-white p-2 shadow-2xl shadow-slate-300/60">
-                <Link
-                  href="/problems"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  문제 추가
-                </Link>
-                <Link
-                  href="/problems/list"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  문제 목록
-                </Link>
-                {hasPendingEdits && (
-                  <Link
-                    href="/problem-edit"
-                    onClick={() => setMenuOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                  >
-                    문제 수정
-                  </Link>
-                )}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className={classNames(
-                "flex h-16 w-16 items-center justify-center rounded-[20px] text-3xl shadow-2xl transition hover:-translate-y-0.5",
-                hasPendingEdits
-                  ? "bg-amber-400 shadow-amber-200/80 hover:bg-amber-500"
-                  : "bg-slate-500 shadow-slate-300/70 hover:bg-slate-600",
-              )}
-              aria-label="문제 관리 메뉴 열기"
-            >
-              ✏️
-            </button>
-          </div>
-        </div>
       </section>
+
+      <div className="pointer-events-none fixed bottom-6 left-6 z-30 sm:bottom-8 sm:left-8">
+        <div ref={menuRef} className="pointer-events-auto relative flex flex-col items-start gap-3">
+          {menuOpen && (
+            <div className="w-40 rounded-2xl bg-white p-2 shadow-2xl shadow-slate-300/60">
+              <Link
+                href="/problems"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                문제 추가
+              </Link>
+              <Link
+                href="/problems/list"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                문제 목록
+              </Link>
+              {hasPendingEdits && (
+                <Link
+                  href="/problem-edit"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  문제 수정
+                </Link>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className={classNames(
+              "flex h-16 w-16 items-center justify-center rounded-[20px] text-3xl shadow-2xl transition hover:-translate-y-0.5",
+              hasPendingEdits
+                ? "bg-amber-400 shadow-amber-200/80 hover:bg-amber-500"
+                : "bg-slate-500 shadow-slate-300/70 hover:bg-slate-600",
+            )}
+            aria-label="문제 관리 메뉴 열기"
+          >
+            ✏️
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
