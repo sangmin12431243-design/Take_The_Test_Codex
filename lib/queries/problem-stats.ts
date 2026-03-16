@@ -60,7 +60,7 @@ export async function fetchWrongNotes(userId: string) {
   const { data, error } = await supabase
     .from("problem_stats")
     .select(
-      "id,problem_id,wrong_count,correct_count,total_solved_count,mastered,mastered_at,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
+      "id,problem_id,wrong_count,correct_count,total_solved_count,mastered,mastered_at,starred,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
     )
     .eq("user_id", userId)
     .gt("wrong_count", 0);
