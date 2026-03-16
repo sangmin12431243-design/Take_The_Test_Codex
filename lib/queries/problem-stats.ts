@@ -90,7 +90,7 @@ export async function fetchStarredProblems(userId: string) {
   const { data, error } = await supabase
     .from("problem_stats")
     .select(
-      "id,problem_id,starred,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
+      "id,problem_id,starred,mastered,wrong_count,correct_count,total_solved_count,problems(id,category_id,question_text,image_url,choice_1,choice_2,choice_3,choice_4,correct_answer,explanation,is_active)",
     )
     .eq("user_id", userId)
     .eq("starred", true)

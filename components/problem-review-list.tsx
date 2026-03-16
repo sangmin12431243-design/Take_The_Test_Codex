@@ -25,6 +25,9 @@ interface Props<T extends ReviewItem> {
   items: T[];
   emptyMessage: string;
   renderMeta?: (item: T) => ReactNode;
+  renderTopMeta?: (item: T) => ReactNode;
+  renderQuestionPrefix?: (item: T) => ReactNode;
+  renderSideAction?: (item: T) => ReactNode;
   onRemove?: (item: T) => Promise<void>;
 }
 
@@ -36,7 +39,15 @@ function getPageNumbers(currentPage: number, totalPages: number) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
-export function ProblemReviewList<T extends ReviewItem>({ items, emptyMessage, renderMeta, onRemove }: Props<T>) {
+export function ProblemReviewList<T extends ReviewItem>({
+  items,
+  emptyMessage,
+  renderMeta,
+  renderTopMeta,
+  renderQuestionPrefix,
+  renderSideAction,
+  onRemove,
+}: Props<T>) {
   const [page, setPage] = useState(1);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number | null>>({});
   const [answerVisible, setAnswerVisible] = useState<Record<string, boolean>>({});
@@ -63,26 +74,36 @@ export function ProblemReviewList<T extends ReviewItem>({ items, emptyMessage, r
 
         return (
           <article key={item.id} className="rounded-lg border border-slate-200 p-4 text-sm">
+            {renderTopMeta && <div className="mb-2">{renderTopMeta(item)}</div>}
+
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="whitespace-pre-wrap font-medium">
-                  {(page - 1) * PAGE_SIZE + index + 1}. {problem.question_text}
-                </p>
+                <div className="flex items-start gap-3">
+                  {renderQuestionPrefix && <div className="pt-0.5">{renderQuestionPrefix(item)}</div>}
+                  <p className="whitespace-pre-wrap font-medium">
+                    {(page - 1) * PAGE_SIZE + index + 1}. {problem.question_text}
+                  </p>
+                </div>
                 <ProblemImage src={problem.image_url} alt="문제 이미지" className="mt-3 max-w-xl" />
-                {renderMeta && <div className="mt-1 text-slate-600">{renderMeta(item)}</div>}
+                {renderMeta && <div className="mt-2 text-slate-600">{renderMeta(item)}</div>}
               </div>
-              {onRemove && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const confirmed = window.confirm("정말 이 항목을 목록에서 제거하시겠습니까?");
-                    if (!confirmed) return;
-                    await onRemove(item);
-                  }}
-                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600"
-                >
-                  없애기
-                </button>
+
+              {renderSideAction ? (
+                <div className="shrink-0">{renderSideAction(item)}</div>
+              ) : (
+                onRemove && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const confirmed = window.confirm("정말 이 항목을 목록에서 제거하시겠습니까?");
+                      if (!confirmed) return;
+                      await onRemove(item);
+                    }}
+                    className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600"
+                  >
+                    없애기
+                  </button>
+                )
               )}
             </div>
 
