@@ -23,11 +23,11 @@ function MenuButton({ href, label, emoji, className }: MenuButtonProps) {
     <Link
       href={href}
       className={classNames(
-        "flex min-h-36 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
+        "flex min-h-36 flex-col items-center justify-center gap-2 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
         className,
       )}
     >
-      <span className="text-2xl" aria-hidden="true">
+      <span className="text-4xl leading-none sm:text-5xl" aria-hidden="true">
         {emoji}
       </span>
       <span>{label}</span>
@@ -155,11 +155,11 @@ export function HomeMenu() {
             <Link
               href="/quiz/setup"
               className={classNames(
-                "flex min-h-36 items-center justify-center gap-3 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
+                "flex min-h-36 flex-col items-center justify-center gap-2 rounded-[28px] px-5 py-5 text-center text-lg font-semibold text-slate-900 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-6",
                 hasResumeSession ? "col-span-3 bg-sky-100 hover:bg-sky-200" : "bg-sky-100 hover:bg-sky-200",
               )}
             >
-              <span className="text-2xl" aria-hidden="true">
+              <span className="text-4xl leading-none sm:text-5xl" aria-hidden="true">
                 ✍️
               </span>
               <span>문제 풀이</span>
@@ -168,9 +168,16 @@ export function HomeMenu() {
             {hasResumeSession && (
               <Link
                 href="/resume"
-                className="flex min-h-36 items-center justify-center rounded-[28px] bg-black px-3 py-5 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:px-4 sm:py-6"
+                className="flex min-h-36 flex-col items-center justify-center gap-1 rounded-[28px] bg-black px-3 py-5 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800 sm:px-4 sm:py-6"
               >
-                이어풀기
+                <span className="text-4xl leading-none sm:text-5xl" aria-hidden="true">
+                  ⏯️
+                </span>
+                <span>
+                  이어
+                  <br />
+                  풀기
+                </span>
               </Link>
             )}
           </div>
@@ -182,7 +189,7 @@ export function HomeMenu() {
         </section>
       </section>
 
-      <div className="pointer-events-none fixed bottom-6 left-6 z-30 sm:bottom-8 sm:left-8">
+      <div className="pointer-events-none fixed bottom-6 left-6 z-30 sm:bottom-8 sm:left-8 min-[1100px]:left-[max(2rem,calc((100vw-1100px)/2+1.5rem))]">
         <div ref={menuRef} className="pointer-events-auto relative flex flex-col items-start gap-3">
           {menuOpen && (
             <div className="w-40 rounded-2xl bg-white p-2 shadow-2xl shadow-slate-300/60">
