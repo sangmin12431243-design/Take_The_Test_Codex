@@ -1,137 +1,199 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { signInWithGoogle, signOut } from "@/lib/auth";
-import { getQueuedProblemIds, subscribeProblemEditQueue } from "@/lib/problem-edit-queue";
+import { fetchInProgressSessions } from "@/lib/queries/quiz";
 
-interface MenuAction {
-  label: string;
-  href: string;
-  requiresAuth?: boolean;
-  toneClass: string;
+function classNames(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
 
-const menuActions: MenuAction[] = [
-  {
-    label: "문제 관리",
-    href: "/problems",
-    requiresAuth: true,
-    toneClass: "bg-sky-600 text-white hover:bg-sky-700",
-  },
-  {
-    label: "문제 풀이",
-    href: "/quiz/setup",
-    requiresAuth: true,
-    toneClass: "bg-emerald-600 text-white hover:bg-emerald-700",
-  },
-  {
-    label: "오답 노트",
-    href: "/wrong-notes",
-    requiresAuth: true,
-    toneClass: "bg-rose-600 text-white hover:bg-rose-700",
-  },
-  {
-    label: "별표 문제",
-    href: "/starred",
-    requiresAuth: true,
-    toneClass: "bg-violet-600 text-white hover:bg-violet-700",
-  },
-  {
-    label: "이어 풀기",
-    href: "/resume",
-    requiresAuth: true,
-    toneClass: "bg-cyan-700 text-white hover:bg-cyan-800",
-  },
-];
+interface MenuButtonProps {
+  href: string;
+  label: string;
+  emoji: string;
+  className: string;
+}
 
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(" ");
+function MenuButton({ href, label, emoji, className }: MenuButtonProps) {
+  return (
+    <Link
+      href={href}
+      className={classNames(
+        "flex min-h-24 items-center justify-center gap-3 rounded-[28px] px-6 py-6 text-center text-base font-semibold text-white shadow-lg shadow-slate-200/70 transition hover:-translate-y-0.5",
+        className,
+      )}
+    >
+      <span className="text-2xl" aria-hidden="true">
+        {emoji}
+      </span>
+      <span>{label}</span>
+    </Link>
+  );
 }
 
 export function HomeMenu() {
   const { user, loading } = useAuth();
+  const [hasResumeSession, setHasResumeSession] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const isLoggedIn = Boolean(user);
-  const [queuedEditCount, setQueuedEditCount] = useState(0);
 
   useEffect(() => {
     if (!user?.id) {
-      setQueuedEditCount(0);
+      setHasResumeSession(false);
       return;
     }
 
-    const sync = () => setQueuedEditCount(getQueuedProblemIds(user.id).length);
-    sync();
-    return subscribeProblemEditQueue(user.id, sync);
+    let active = true;
+
+    const loadSessions = async () => {
+      try {
+        const sessions = await fetchInProgressSessions(user.id);
+        if (active) {
+          setHasResumeSession(sessions.length > 0);
+        }
+      } catch (error) {
+        console.error("Failed to load in-progress sessions", error);
+        if (active) {
+          setHasResumeSession(false);
+        }
+      }
+    };
+
+    void loadSessions();
+
+    return () => {
+      active = false;
+    };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [menuOpen]);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+        <section className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white px-8 py-12 text-center shadow-xl shadow-slate-200/70">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">Take the test</p>
+          <p className="mt-4 text-sm text-slate-500">로그인 상태를 확인하고 있습니다.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+        <section className="flex w-full max-w-md flex-col items-center rounded-[32px] border border-slate-200 bg-white px-8 py-14 text-center shadow-xl shadow-slate-200/70">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">Take the test</p>
+          <h1 className="mt-4 text-3xl font-bold text-slate-900">개인 문제 학습장</h1>
+          <button
+            type="button"
+            onClick={() => signInWithGoogle()}
+            className="mt-10 rounded-full bg-slate-900 px-10 py-5 text-lg font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            google 로그인
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 py-8 sm:justify-center sm:px-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-        <header className="mb-6 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">Take The Test</p>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">개인용 문제 학습장</h1>
-          <p className="text-sm text-slate-600">
-            문제를 직접 등록하고, 실전 퀴즈를 풀고, 오답 노트와 별표 문제를 관리할 수 있습니다.
-          </p>
-          <p className="text-xs text-slate-500">
-            {loading
-              ? "로그인 상태를 확인하는 중입니다."
-              : isLoggedIn
-                ? `${user?.email ?? "사용자"}로 로그인되어 있습니다.`
-                : "로그인하면 개인 문제 데이터를 저장하고 이어서 학습할 수 있습니다."}
-          </p>
+    <main className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6">
+      <section className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-5xl flex-col rounded-[36px] border border-slate-200 bg-white px-5 py-5 shadow-xl shadow-slate-200/70 sm:px-8 sm:py-7">
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">Take the test</p>
+            <h1 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">개인 문제 학습장</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            로그아웃
+          </button>
         </header>
 
-        <div className="grid gap-3">
-          {!isLoggedIn ? (
-            <button
-              type="button"
-              onClick={() => signInWithGoogle()}
-              className="rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700"
-            >
-              Google로 로그인
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => signOut()}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-            >
-              로그아웃
-            </button>
-          )}
-
-          {menuActions.map((action) => {
-            const disabled = Boolean(action.requiresAuth && !isLoggedIn);
-
-            return (
+        <section className="mt-10 flex flex-1 flex-col justify-center gap-5">
+          <div className="flex flex-col gap-5 lg:flex-row">
+            <div className={classNames("grid gap-5", hasResumeSession ? "lg:w-full lg:grid-cols-4" : "w-full")}>
               <Link
-                key={action.label}
-                href={action.href}
-                aria-disabled={disabled}
-                tabIndex={disabled ? -1 : 0}
+                href="/quiz/setup"
                 className={classNames(
-                  "rounded-xl px-4 py-3 text-center text-sm font-semibold transition",
-                  disabled ? "pointer-events-none cursor-not-allowed bg-slate-100 text-slate-400" : action.toneClass,
+                  "flex min-h-24 items-center justify-center gap-3 rounded-[28px] px-6 py-6 text-center text-base font-semibold text-white shadow-lg shadow-sky-200/70 transition hover:-translate-y-0.5",
+                  hasResumeSession ? "lg:col-span-3 bg-sky-400 hover:bg-sky-500" : "bg-sky-400 hover:bg-sky-500",
                 )}
               >
-                {action.label}
+                <span className="text-2xl" aria-hidden="true">
+                  📝
+                </span>
+                <span>문제 풀이</span>
               </Link>
-            );
-          })}
 
-          {isLoggedIn && queuedEditCount > 0 && (
-            <Link
-              href="/problem-edit"
-              className="rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-amber-600"
-            >
-              문제 수정 {queuedEditCount}건
-            </Link>
-          )}
-        </div>
+              {hasResumeSession && (
+                <Link
+                  href="/resume"
+                  className="flex min-h-24 items-center justify-center rounded-[28px] bg-black px-4 py-6 text-center text-base font-semibold text-white shadow-lg shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                >
+                  이어풀기
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <MenuButton href="/wrong-notes" label="오답 노트" emoji="📝" className="bg-red-500 hover:bg-red-600" />
+            <MenuButton href="/starred" label="별표 문제" emoji="⭐" className="bg-yellow-400 text-slate-900 hover:bg-yellow-300" />
+          </div>
+        </section>
       </section>
+
+      <div ref={menuRef} className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-3">
+        {menuOpen && (
+          <div className="w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-300/60">
+            <Link
+              href="/problems"
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              문제 추가
+            </Link>
+            <Link
+              href="/problems/list"
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              문제 목록
+            </Link>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-500 text-3xl shadow-2xl shadow-slate-300/70 transition hover:-translate-y-0.5 hover:bg-slate-600"
+          aria-label="문제 관리 메뉴 열기"
+        >
+          ✏️
+        </button>
+      </div>
     </main>
   );
 }
